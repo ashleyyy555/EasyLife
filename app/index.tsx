@@ -1,5 +1,5 @@
 import { Image, Text, View, SafeAreaView, Pressable } from "react-native";
-import {router, useRouter} from "expo-router";
+import {router} from "expo-router";
 import "./global.css";
 
 export default function Index() {
