@@ -5,6 +5,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 import {useTheme} from "../context/ThemeContext";
 
 export default function Layout() {
+    // Top Left Settings button for home.tsx
     const HeaderLeft = () => {
         const { theme } = useTheme();
 
@@ -35,7 +36,7 @@ export default function Layout() {
             >
                 {/* Override `headerLeft` for index.tsx only */}
                 <Stack.Screen
-                    name="index"
+                    name="home"
                     options={{
                         headerLeft: () => <HeaderLeft />,
                     }}
