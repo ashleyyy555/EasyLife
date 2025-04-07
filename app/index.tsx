@@ -1,72 +1,77 @@
-import { Image, Text, View, SafeAreaView, Pressable } from "react-native";
-import { useColorScheme } from "react-native";
-import {router} from "expo-router";
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/FirebaseConfig";
+import {router} from "expo-router"; // Update path if needed
 import "./global.css";
-import {useTheme} from "../context/ThemeContext";
 
-export default function Index() {
-    const { theme } = useTheme();
-    const colorScheme = useColorScheme();
+
+export default function Register() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleRegister = async () => {
+        if (password !== confirmPassword) {
+            Alert.alert("Passwords do not match");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            Alert.alert("Account Created!");
+            // 🚀 Navigate to login or dashboard
+        } catch (error: any) {
+            Alert.alert("Registration Failed", error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
-            <View className="items-center">
-                <Image source={require("../assets/images/EasyLife-logo.png")} style={{ width: '70%', height: '20%', marginTop: 30 }}/>
-            </View>
-            <View className="justify-center items-center">
-                {/* Custom Button */}
-                <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
-                    className="bg-emergency justify-center items-center"
-                    style={{
-                        width: 360,
-                        height: 154,
-                        borderRadius: 54,
-                    }}
-                >
-                    <Text className="text-white text-lg font-bold">EMERGENCY</Text>
-                </Pressable>
-            </View>
-            <View className="flex-row justify-center items-center gap-x-7 mt-4">
-                <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
-                    className="bg-medical-records justify-center items-center"
-                    style={{
-                        width: 160,
-                        height: 160,
-                        borderRadius: 35,
-                    }}
-                >
-                    <Text className="text-white text-lg font-bold">+</Text>
-                </Pressable>
+        <View className="flex-1 p-6 justify-center bg-[#121212]">
+            <Text className="text-[28px] font-bold mb-6 text-white text-center">Create an Account</Text>
 
-                <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
-                    className="bg-location justify-center items-center"
-                    style={{
-                        width: 160,
-                        height: 160,
-                        borderRadius: 35,
-                    }}
-                >
-                    <Text className="text-white text-lg font-bold">-</Text>
-                </Pressable>
-            </View>
+            <TextInput
+                className="bg-[#1E1E1E] p-3.5 rounded-lg mb-4 text-white"
+                placeholder="Email"
+                placeholderTextColor="#aaa"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+            />
 
-            <View className="justify-center items-center mt-4">
-                {/* Custom Button */}
-                <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
-                    className="bg-reports justify-center items-center"
-                    style={{
-                        width: 360,
-                        height: 154,
-                        borderRadius: 54,
-                    }}
-                >
-                    <Text className="text-black text-lg font-bold">REPORTS</Text>
-                </Pressable>
-            </View>
-        </SafeAreaView>
+            <TextInput
+                className="bg-[#1E1E1E] p-3.5 rounded-lg mb-4 text-white"
+                placeholder="Password"
+                placeholderTextColor="#aaa"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+            />
+
+            <TextInput
+                className="bg-[#1E1E1E] p-3.5 rounded-lg mb-4 text-white"
+                placeholder="Confirm Password"
+                placeholderTextColor="#aaa"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+            />
+
+            <TouchableOpacity className="bg-[#4CAF50] p-4 rounded-lg items-center mt-2" onPress={handleRegister} disabled={loading}>
+                <Text className="text-white font-bold">{loading ? "Creating Account..." : "Sign Up"}</Text>
+            </TouchableOpacity>
+
+            {/* Optional: Navigate to Login */}
+            <TouchableOpacity onPress={() => router.push("/login")}>
+                <Text className="text-[#aaa] mt-4 text-center">Already have an account? Log in</Text>
+            </TouchableOpacity>
+        </View>
     );
 }
+
+
