@@ -67,7 +67,7 @@ export default function Register() {
             </TouchableOpacity>
 
             {/* Optional: Navigate to Login */}
-            <TouchableOpacity onPress={() => router.push("/login")}>
+            <TouchableOpacity onPress={() => router.replace("/login")}>
                 <Text className="text-[#aaa] mt-4 text-center">Already have an account? Log in</Text>
             </TouchableOpacity>
         </View>

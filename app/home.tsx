@@ -41,7 +41,7 @@ export default function Home() {
                 </Pressable>
 
                 <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
+                    onPress={() => router.push("/MapViewer")} // Navigate to new screen
                     className="bg-location justify-center items-center"
                     style={{
                         width: 160,
