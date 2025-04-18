@@ -74,7 +74,7 @@ export default function emergencyReport() {
             const reportRef = doc(db, "reports", reportId.toString());
 
             await setDoc(reportRef, {
-                id: reportId,
+                reportId: reportId,
                 userId: userId,
                 date: new Date().toISOString(),  // Store the date as a string datetime
                 location: {

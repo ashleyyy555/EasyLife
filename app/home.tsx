@@ -4,6 +4,7 @@ import {router} from "expo-router";
 import "./global.css";
 import {useTheme} from "../context/ThemeContext";
 
+
 export default function Home() {
     const { theme } = useTheme();
     const colorScheme = useColorScheme();
