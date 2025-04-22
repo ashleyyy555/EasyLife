@@ -41,7 +41,7 @@ export default function Layout() {
                         className="w-10 h-10 rounded-full"
                     />
                 </TouchableOpacity>
-                {/* We will use the Portal here to render the menu outside of the header */}
+
                 <Portal>
                     {menuVisible && (
                         <View
@@ -75,16 +75,17 @@ export default function Layout() {
     };
 
     return (
-        <Provider> {/* Wrap your app with the Provider from react-native-paper */}
+        <Provider>
             <ThemeProvider>
                 <Stack
                     screenOptions={{
-                        headerTitle: "", // Removes the default title
+                        headerTitle: () => <View />, // Removes the default title
                         headerTransparent: true, // Makes header see-through
                         headerRight: () => <HeaderRight />,
+                        headerBackTitle: "Back",
                     }}
                 >
-                    {/* Override `headerLeft` for index.tsx only */}
+                    {/* Override `headerLeft` for home.tsx only */}
                     <Stack.Screen
                         name="home"
                         options={{

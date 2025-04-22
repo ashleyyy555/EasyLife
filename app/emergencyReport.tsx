@@ -1,8 +1,8 @@
-import { View, Text, TextInput, Pressable } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, runTransaction, Timestamp } from "firebase/firestore";
+import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
@@ -12,8 +12,6 @@ export default function emergencyReport() {
     const { theme } = useTheme();
 
     const [user, setUser] = useState(null);
-    const [gender, setGender] = useState("");
-    const [currentGender, setCurrentGender] = useState("");
     const [userId, setUserId] = useState("");
 
     useEffect(() => {
@@ -94,8 +92,8 @@ export default function emergencyReport() {
 
     return (
         <View className="flex-1 justify-center items-center px-4" style={{ backgroundColor: theme.background }}>
-            <Text className="text-xl font-bold text-white mb-2">Report Emergency</Text>
-            <Text className="text-l text-white mb-2">User Id = {userId} </Text>
+            <Text className="text-xl font-bold mb-2" style={{ color : theme.text }}>Report Emergency</Text>
+            <Text className="text-l mb-2" style={{ color : theme.text }}>User Id = {userId} </Text>
 
             <Pressable onPress={handleSubmit} className="bg-red-600 px-4 py-2 rounded mt-2">
                 <Text className="text-white font-semibold">Submit Report</Text>
