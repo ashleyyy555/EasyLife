@@ -23,7 +23,7 @@ export default function Register() {
             await createUserWithEmailAndPassword(auth, email, password);
             Alert.alert("Account Created!");
             // 🚀 Navigate to login or dashboard
-            router.replace('/home');
+            router.replace('/Public/home');
         } catch (error: any) {
             Alert.alert("Registration Failed", error.message);
         } finally {
@@ -67,7 +67,6 @@ export default function Register() {
                 <Text className="text-white font-bold">{loading ? "Creating Account..." : "Sign Up"}</Text>
             </TouchableOpacity>
 
-            {/* Optional: Navigate to Login */}
             <TouchableOpacity onPress={() => router.replace("/login")}>
                 <Text className="text-[#aaa] mt-4 text-center">Already have an account? Log in</Text>
             </TouchableOpacity>

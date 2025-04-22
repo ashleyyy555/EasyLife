@@ -1,9 +1,9 @@
 import { View, Text, TextInput, Pressable } from "react-native";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "../FirebaseConfig"; // use your config here
+import { auth, db } from "../../FirebaseConfig"; // use your config here
 import Map from "./Map";
 
 export default function MapViewer() {

@@ -1,8 +1,8 @@
 import {router, Stack} from "expo-router";
 import { TouchableOpacity, Image, View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { ThemeProvider } from "../context/ThemeContext";
-import { useTheme } from "../context/ThemeContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useState } from "react";
 import { Portal, Provider } from 'react-native-paper';
 import { auth } from "@/FirebaseConfig";
@@ -87,7 +87,7 @@ export default function Layout() {
                 >
                     {/* Override `headerLeft` for home.tsx only */}
                     <Stack.Screen
-                        name="home"
+                        name="Public/home"
                         options={{
                             headerLeft: () => <HeaderLeft />,
                         }}

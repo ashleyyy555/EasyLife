@@ -8,7 +8,7 @@ export default function Index() {
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 // If the user is authenticated, navigate to the home page
-                router.replace("/home");
+                router.replace("/Public/home");
             } else {
                 // If the user is not authenticated, navigate to the register page
                 // @ts-ignore

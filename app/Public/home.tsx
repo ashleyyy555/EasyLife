@@ -1,8 +1,8 @@
 import { Image, Text, View, SafeAreaView, Pressable } from "react-native";
 import { useColorScheme } from "react-native";
 import {router} from "expo-router";
-import "./global.css";
-import {useTheme} from "../context/ThemeContext";
+import "../global.css";
+import {useTheme} from "@/context/ThemeContext";
 
 
 export default function Home() {
@@ -12,12 +12,12 @@ export default function Home() {
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
             <View className="items-center">
-                <Image source={require("../assets/images/EasyLife-logo.png")} style={{ width: '70%', height: '20%', marginTop: 30 }}/>
+                <Image source={require("../../assets/images/EasyLife-logo.png")} style={{ width: '70%', height: '20%', marginTop: 30 }}/>
             </View>
             <View className="justify-center items-center">
                 {/* Custom Button */}
                 <Pressable
-                    onPress={() => router.push("/emergencyReport")} // Navigate to new screen
+                    onPress={() => router.push("/Public/emergencyReport")} // Navigate to new screen
                     className="bg-emergency justify-center items-center"
                     style={{
                         width: 360,
@@ -30,7 +30,7 @@ export default function Home() {
             </View>
             <View className="flex-row justify-center items-center gap-x-7 mt-4">
                 <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
+                    onPress={() => router.push("/Public/new-screen")} // Navigate to new screen
                     className="bg-medical-records justify-center items-center"
                     style={{
                         width: 160,
@@ -42,7 +42,7 @@ export default function Home() {
                 </Pressable>
 
                 <Pressable
-                    onPress={() => router.push("/MapViewer")} // Navigate to new screen
+                    onPress={() => router.push("/Public/MapViewer")} // Navigate to new screen
                     className="bg-location justify-center items-center"
                     style={{
                         width: 160,
@@ -57,7 +57,7 @@ export default function Home() {
             <View className="justify-center items-center mt-4">
                 {/* Custom Button */}
                 <Pressable
-                    onPress={() => router.push("/new-screen")} // Navigate to new screen
+                    onPress={() => router.push("/Public/new-screen")} // Navigate to new screen
                     className="bg-reports justify-center items-center"
                     style={{
                         width: 360,

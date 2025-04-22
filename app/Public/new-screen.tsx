@@ -1,9 +1,9 @@
 import { View, Text, TextInput, Pressable } from "react-native";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "../FirebaseConfig"; // use your config here
+import { auth, db } from "../../FirebaseConfig"; // use your config here
 
 export default function NewScreen() {
     const { theme } = useTheme();
@@ -56,9 +56,9 @@ export default function NewScreen() {
 
     return (
         <View className="flex-1 justify-center items-center px-4" style={{ backgroundColor: theme.background }}>
-            <Text className="text-xl font-bold text-white mb-2">Emergency Page</Text>
-            <Text className="text-white mb-4">
-                Current Gender: <Text className="font-semibold">{currentGender || "Not set"}</Text>
+            <Text className="text-xl font-bold mb-2" style={{ color: theme.text }}>Emergency Page</Text>
+            <Text className="mb-4" style={{ color: theme.text }}>
+                Current Gender: <Text className="font-semibold" style={{ color: theme.text }}>{currentGender || "Not set"}</Text>
             </Text>
 
             <TextInput

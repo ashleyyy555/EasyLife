@@ -1,9 +1,9 @@
 import { View, Text, Pressable } from "react-native";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc, runTransaction } from "firebase/firestore";
-import { auth, db } from "../FirebaseConfig";
+import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
 
