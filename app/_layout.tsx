@@ -7,10 +7,33 @@ import { useState } from "react";
 import { Portal, Provider } from 'react-native-paper';
 import { auth } from "@/FirebaseConfig";
 import { signOut } from "firebase/auth";
+import {
+    NavigationProvider,
+    TaskRemovedBehavior,
+    type TermsAndConditionsDialogOptions,
+} from '@googlemaps/react-native-navigation-sdk';
+import { NavigationView } from '@googlemaps/react-native-navigation-sdk';
+import { useNavigation } from '@react-navigation/native';
+import SideMenu from '@/components/SideMenu';
+
 
 
 export default function Layout() {
     const [menuVisible, setMenuVisible] = useState(false);
+    const navigation = useNavigation();
+
+
+    const termsAndConditionsDialogOptions: TermsAndConditionsDialogOptions = {
+        title: 'Required Terms and Conditions',
+        companyName: 'EasyLife',
+        showOnlyDisclaimer: true,
+    };
+
+    // const navigateToScreen = () => {
+    //     navigation.navigate('NavigationScreen', {
+    //         termsAndConditionsDialogOptions: termsAndConditionsDialogOptions,
+    //     });
+    // };
 
     // Top Left Settings button for home.tsx
     const HeaderLeft = () => {
@@ -49,12 +72,9 @@ export default function Layout() {
                             style={{
                                 opacity: menuVisible ? 1 : 0,
                                 pointerEvents: menuVisible ? "auto" : "none",
-                                marginTop: 60,
                             }}
                         >
-                            <TouchableOpacity onPress={() => handleSignOut()}>
-                                <Text className="py-2 text-base text-black">Sign Out</Text>
-                            </TouchableOpacity>
+                            <SideMenu isOpen={menuVisible} setIsOpen={setMenuVisible} />
                         </View>
                     )}
                 </Portal>
@@ -75,25 +95,26 @@ export default function Layout() {
     };
 
     return (
-        <Provider>
-            <ThemeProvider>
-                <Stack
-                    screenOptions={{
-                        headerTitle: () => <View />, // Removes the default title
-                        headerTransparent: true, // Makes header see-through
-                        headerRight: () => <HeaderRight />,
-                        headerBackTitle: "Back",
-                    }}
-                >
-                    {/* Override `headerLeft` for home.tsx only */}
-                    <Stack.Screen
-                        name="Public/home"
-                        options={{
-                            headerLeft: () => <HeaderLeft />,
+            <Provider>
+                <ThemeProvider>
+                    <Stack
+                        screenOptions={{
+                            headerTitle: () => <View />, // Removes the default title
+                            headerTransparent: true, // Makes header see-through
+                            headerRight: () => <HeaderRight />,
+                            headerBackTitle: "Back",
                         }}
-                    />
-                </Stack>
-            </ThemeProvider>
-        </Provider>
+                    >
+                        {/* Override `headerLeft` for home.tsx only */}
+                        <Stack.Screen
+                            name="Public/home"
+                            options={{
+                                headerLeft: () => <HeaderLeft />,
+                            }}
+                        />
+                    </Stack>
+
+                </ThemeProvider>
+            </Provider>
     );
 }

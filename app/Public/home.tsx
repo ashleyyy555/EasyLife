@@ -9,6 +9,8 @@ export default function Home() {
     const { theme } = useTheme();
     const colorScheme = useColorScheme();
 
+
+
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
             <View className="items-center">

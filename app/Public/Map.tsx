@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
+import CarMarker from "@/components/CarMarker";
 
 const Map = () => {
     const [region, setRegion] = useState<Region | null>(null);
@@ -40,7 +41,14 @@ const Map = () => {
             style={styles.map}
             initialRegion={region}
             showsUserLocation
-        />
+        >
+            <CarMarker
+                latitude={region.latitude + 100 / 111000}
+                longitude={
+                    region.longitude + 100 / (111000 * Math.cos(region.latitude * Math.PI / 180))
+                }
+            />
+        </MapView>
     );
 };
 

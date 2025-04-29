@@ -63,7 +63,7 @@ export default function Register() {
                 secureTextEntry
             />
 
-            <TouchableOpacity className="bg-[#4CAF50] p-4 rounded-lg items-center mt-2" onPress={handleRegister} disabled={loading}>
+            <TouchableOpacity className="bg-[#1E88E5] p-4 rounded-lg items-center mt-2" onPress={handleRegister} disabled={loading}>
                 <Text className="text-white font-bold">{loading ? "Creating Account..." : "Sign Up"}</Text>
             </TouchableOpacity>
 

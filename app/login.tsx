@@ -44,7 +44,7 @@ export default function Login() {
                 <Text className="text-white font-bold">Log In</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push("/")}>
+            <TouchableOpacity onPress={() => router.replace("/")}>
                 <Text className="text-[#aaa] mt-4 text-center">Don't have an account? Register</Text>
             </TouchableOpacity>
         </View>
