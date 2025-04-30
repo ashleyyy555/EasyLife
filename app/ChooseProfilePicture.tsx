@@ -1,17 +1,19 @@
-import {Pressable, Text, TextInput, View, Image} from "react-native";
+import {Pressable, Text, TextInput, View, Image, TouchableOpacity, Modal} from "react-native";
 import {useTheme} from "@/context/ThemeContext";
 import {useEffect, useState} from "react";
 import {onAuthStateChanged} from "firebase/auth";
 import {doc, getDoc, setDoc} from "firebase/firestore";
-import { RadioButton } from "react-native-paper"; // Import RadioButton
-import {auth, db} from "@/FirebaseConfig";
+import {auth, db, storage} from "@/FirebaseConfig";
 import { Ionicons } from '@expo/vector-icons';
-
+import * as ImagePicker from 'expo-image-picker';
+import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
+import { User } from "firebase/auth";
+import * as FileSystem from 'expo-file-system';
 
 export default function ChooseProfilePicture() {
     const { theme } = useTheme();
 
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState<User | null>(null);
     const [gender, setGender] = useState("");
 
     // User Details
@@ -23,84 +25,181 @@ export default function ChooseProfilePicture() {
     const [phone, setPhone] = useState("");
 
 
-    const handleGenderChange = (value: string) => {
-        setGender(value); // Update gender selection
-    };
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
 
+    const openPicturePopup = () => setIsModalVisible(true);
+    const closePicturePopup = () => setIsModalVisible(false);
+
+    // useEffect for Authentication
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 // @ts-ignore
                 setUser(firebaseUser);
+
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    if (userData.profilePicUrl) {
+                        // If profilePicUrl exists, set the selectedImage state
+                        setSelectedImage(userData.profilePicUrl);
+                    }
+                }
             }
         });
 
         return () => unsubscribe();
     }, []);
 
+    // useEffect for Camera Permissions
+    useEffect(() => {
+        (async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                alert('Sorry, we need media permissions to make this work!');
+            }
 
+            const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+            if (cameraStatus.status !== 'granted') {
+                alert('Sorry, we need camera permissions to make this work!');
+            }
+        })();
+    }, []);
 
-    function calculateBirthday() {
-        const birthDateStr = icNumber.slice(0,6);
+    // Image Picker Functions
+    const pickFromGallery = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
 
-        const day = parseInt(birthDateStr.slice(0, 2));
-        const month = parseInt(birthDateStr.slice(2, 4));
-        const year = parseInt(birthDateStr.slice(4, 6));
-
-        const fullYear = year < 50 ? 2000 + year : 1900 + year;
-
-        return new Date(fullYear, month - 1, day);
-    }
-
-    const handleSubmit = async () => {
-        if (!user || gender.trim() === "") return;
-
-        try {
-            // @ts-ignore
-            await setDoc(doc(db, "users", user.uid), {
-                gender: gender.trim(),
-            }, { merge: true });
-
-            setGender("");
-        } catch (error) {
-            console.error("Error updating gender:", error);
+        if (!result.canceled) {
+            setSelectedImage(result.assets[0].uri);
+            closePicturePopup?.(); // optional if you have a modal
         }
     };
+
+
+    const takePhotoWithCamera = async () => {
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            setSelectedImage(result.assets[0].uri);
+            closePicturePopup();
+        }
+    };
+
+    // Upload Picture to Firebase
+    const handleSubmit = async () => {
+        if (!selectedImage || !user?.uid) return;
+
+        try {
+            const response = await fetch(selectedImage);
+            const blob = await response.blob();
+
+            const filename = `profilePictures/${user.uid}.jpg`;
+            const storageRef = ref(storage, filename);
+
+            await uploadBytes(storageRef, blob); // or uploadBytesResumable
+
+            const downloadURL = await getDownloadURL(storageRef);
+            console.log("✅ URL:", downloadURL);
+        } catch (e) {
+            console.error("🔥 Upload error:", e);
+        }
+    };
+
 
     return (
         <View className="flex-1" style={{ backgroundColor: theme.background }}>
             <View className="flex-1 px-4" style={{ backgroundColor: theme.background, marginTop: 150 }}>
                 <View className="items-center">
                     <Text className="text-4xl font-bold mb-2" style={{ color: theme.text }}>Choose Profile Picture</Text>
-                    <View style={{ position: "relative", marginTop: 50, marginBottom: 50}}>
-                        <Image
-                            source={require("@/assets/images/lzj.jpeg")}
-                            style={{ width: 300, height: 300, borderRadius: 150, borderColor: theme.text, borderWidth: 2 }}
-                        />
+                        <View style={{ position: "relative", marginTop: 50, marginBottom: 50}}>
+                            <TouchableOpacity onPress={openPicturePopup}>
+                                <Image
+                                    source={
+                                        selectedImage
+                                            ? { uri: selectedImage }
+                                            : require("@/assets/images/lzj.jpeg")
+                                    }
+                                    style={{ width: 300, height: 300, borderRadius: 150, borderColor: theme.text, borderWidth: 2 }}
+                                />
 
-                        <Ionicons
-                            name="camera-outline"
-                            size={40}
-                            color={theme.text}
-                            style={{
-                                position: 'absolute',
-                                bottom: 20,
-                                right: 10,
-                                backgroundColor: theme.background,
-                                borderRadius: 30,
-                                padding: 5,
-                                borderWidth: 2,
-                                borderColor: theme.text,
-                            }}
-                        />
-                    </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={openPicturePopup}>
+                                <Ionicons
+                                    name="camera-outline"
+                                    size={40}
+                                    color={theme.text}
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: 20,
+                                        right: 10,
+                                        backgroundColor: theme.background,
+                                        borderRadius: 30,
+                                        padding: 5,
+                                        borderWidth: 2,
+                                        borderColor: theme.text,
+                                    }}
+                                />
+                            </TouchableOpacity>
+
+                            <Modal
+                                transparent
+                                visible={isModalVisible}
+                                animationType="fade"
+                                onRequestClose={closePicturePopup}
+                            >
+                                <Pressable
+                                    style={{
+                                        flex: 1,
+                                        backgroundColor: 'rgba(0,0,0,0.5)',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}
+                                    onPress={closePicturePopup} // Close when pressing outside
+                                >
+                                    <View className="items-center" style={{
+                                        width: 300,
+                                        backgroundColor: 'white',
+                                        borderRadius: 10,
+                                        padding: 20
+                                    }}>
+                                        <Pressable onPress={() => {pickFromGallery()}}>
+                                            <Text style={{ color: 'blue', marginBottom: 10 }}>Pick from Gallery</Text>
+                                        </Pressable>
+                                        <Pressable onPress={() => {takePhotoWithCamera()}}>
+                                            <Text style={{ color: 'blue', marginBottom: 10 }}>Take a Photo</Text>
+                                        </Pressable>
+                                        <Pressable onPress={() => { console.log("Remove Photo"); closePicturePopup(); }}>
+                                            <Text style={{ color: 'blue' }}>Remove Photo</Text>
+                                        </Pressable>
+                                    </View>
+                                </Pressable>
+                            </Modal>
+                        </View>
+
                 </View>
 
 
-                <View className="flex-row justify-center items-center">
+                <View className="justify-center items-center">
+                    <Pressable onPress={handleSubmit} className="bg-blue-600 px-4 py-2 rounded mt-2 mb-2">
+                        <Text className="text-white font-semibold">Next</Text>
+                    </Pressable>
+
                     <Pressable onPress={handleSubmit} className="bg-blue-600 px-4 py-2 rounded mt-2">
-                        <Text className="text-white font-semibold">Submit</Text>
+                        <Text className="text-white font-semibold">Skip</Text>
                     </Pressable>
                 </View>
 
