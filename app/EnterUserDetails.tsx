@@ -2,7 +2,7 @@ import {Pressable, Text, TextInput, View} from "react-native";
 import {useTheme} from "@/context/ThemeContext";
 import {useEffect, useState} from "react";
 import {onAuthStateChanged} from "firebase/auth";
-import {doc, getDoc, setDoc} from "firebase/firestore";
+import {doc, getDoc, setDoc, addDoc, collection} from "firebase/firestore";
 import { RadioButton } from "react-native-paper"; // Import RadioButton
 import {auth, db} from "@/FirebaseConfig";
 import {router} from "expo-router"; // use your config here
@@ -12,7 +12,9 @@ export default function EnterUserDetails() {
     const { theme } = useTheme();
 
     const [user, setUser] = useState(null);
-    const [gender, setGender] = useState("");
+    const [userId, setUserId] = useState("");
+
+
 
     // User Details
     const [fullName, setFullName] = useState("");
@@ -21,6 +23,8 @@ export default function EnterUserDetails() {
     const [state, setState] = useState("");
     const [postCode, setPostCode] = useState("");
     const [phone, setPhone] = useState("");
+    const [gender, setGender] = useState("");
+    const [birthday, setBirthday] = useState<Date | null>(null);
 
     const handleGenderChange = (value: string) => {
         setGender(value); // Update gender selection
@@ -32,6 +36,7 @@ export default function EnterUserDetails() {
             if (firebaseUser) {
                 // @ts-ignore
                 setUser(firebaseUser);
+                setUserId(firebaseUser.uid)
             }
         });
 
@@ -40,32 +45,56 @@ export default function EnterUserDetails() {
 
 
 
-   function calculateBirthday() {
-       const birthDateStr = icNumber.slice(0,6);
+    const calculateBirthday = () => {
+        const birthDateStr = icNumber.slice(0, 6);
 
-       const day = parseInt(birthDateStr.slice(0, 2));
-       const month = parseInt(birthDateStr.slice(2, 4));
-       const year = parseInt(birthDateStr.slice(4, 6));
+        const day = parseInt(birthDateStr.slice(0, 2));
+        const month = parseInt(birthDateStr.slice(2, 4));
+        const year = parseInt(birthDateStr.slice(4, 6));
 
-       const fullYear = year < 50 ? 2000 + year : 1900 + year;
+        const fullYear = year < 50 ? 2000 + year : 1900 + year;
 
-       return new Date(fullYear, month - 1, day);
-   }
+        const date = new Date(fullYear, month - 1, day);
+        setBirthday(date); // Set the value in state
+    };
+
+    useEffect(() => {
+        if (icNumber.length >= 6) {
+            calculateBirthday();
+        }
+    }, [icNumber]);
 
     const handleSubmit = async () => {
-        // if (!user || gender.trim() === "") return;
-        //
-        // try {
-        //     // @ts-ignore
-        //     await setDoc(doc(db, "users", user.uid), {
-        //         gender: gender.trim(),
-        //     }, { merge: true });
-        //
-        //     setGender("");
-        // } catch (error) {
-        //     console.error("Error updating gender:", error);
-        // }
-        router.push("/ChooseProfilePicture");
+        if (
+            fullName.trim() === '' ||
+            icNumber.trim() === '' ||
+            address.trim() === '' ||
+            state.trim() === '' ||
+            postCode.trim() === '' ||
+            phone.trim() === '' ||
+            gender.trim() === ''
+        ) {
+            console.log('Please fill in all fields.');
+            return;
+        }
+
+        try {
+            await setDoc(doc(db, 'users', userId), {
+                fullName,
+                icNumber,
+                address,
+                state,
+                postCode,
+                phone,
+                gender,
+                updatedAt: new Date(),
+            });
+
+            console.log('Data saved under user ID:', userId);
+            router.push("/ChooseProfilePicture");
+        } catch (error) {
+            console.error('Error uploading data:', error);
+        }
     };
 
     return (
