@@ -9,6 +9,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { User } from "firebase/auth";
 import * as FileSystem from 'expo-file-system';
+import {router} from "expo-router"; // use your config here
+
 
 export default function ChooseProfilePicture() {
     const { theme } = useTheme();
@@ -225,7 +227,7 @@ export default function ChooseProfilePicture() {
                         <Text className="text-white font-semibold">Next</Text>
                     </Pressable>
 
-                    <Pressable onPress={handleSubmit} className="bg-blue-600 px-4 py-2 rounded mt-2">
+                    <Pressable onPress={() => router.push("/Public/home")} className="bg-blue-600 px-4 py-2 rounded mt-2">
                         <Text className="text-white font-semibold">Skip</Text>
                     </Pressable>
                 </View>

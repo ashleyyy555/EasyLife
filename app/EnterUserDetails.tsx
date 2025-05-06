@@ -2,7 +2,7 @@ import {Pressable, Text, TextInput, View} from "react-native";
 import {useTheme} from "@/context/ThemeContext";
 import {useEffect, useState} from "react";
 import {onAuthStateChanged} from "firebase/auth";
-import {doc, getDoc, setDoc, addDoc, collection} from "firebase/firestore";
+import {doc, getDoc, setDoc, addDoc, collection, updateDoc} from "firebase/firestore";
 import { RadioButton } from "react-native-paper"; // Import RadioButton
 import {auth, db} from "@/FirebaseConfig";
 import {router} from "expo-router"; // use your config here
@@ -79,7 +79,7 @@ export default function EnterUserDetails() {
         }
 
         try {
-            await setDoc(doc(db, 'users', userId), {
+            await updateDoc(doc(db, 'users', userId), {
                 fullName,
                 icNumber,
                 address,
@@ -209,6 +209,10 @@ export default function EnterUserDetails() {
                 <View className="flex-row justify-center items-center">
                     <Pressable onPress={handleSubmit} className="bg-blue-600 px-4 py-2 rounded mt-2">
                         <Text className="text-white font-semibold">Submit</Text>
+                    </Pressable>
+
+                    <Pressable onPress={() => router.push("/ChooseProfilePicture")} className="bg-blue-600 px-4 py-2 rounded mt-2">
+                        <Text className="text-white font-semibold">Skip</Text>
                     </Pressable>
                 </View>
 
