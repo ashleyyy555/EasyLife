@@ -1,39 +1,53 @@
-import {router, Stack} from "expo-router";
+import { router, Stack } from "expo-router";
+import { useEffect, useState } from "react";
 import { TouchableOpacity, Image, View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useTheme } from "@/context/ThemeContext";
-import { useState } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth, db } from "@/FirebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 import { Portal, Provider } from 'react-native-paper';
-import { auth } from "@/FirebaseConfig";
-import { signOut } from "firebase/auth";
-import {
-    NavigationProvider,
-    TaskRemovedBehavior,
-    type TermsAndConditionsDialogOptions,
-} from '@googlemaps/react-native-navigation-sdk';
-import { NavigationView } from '@googlemaps/react-native-navigation-sdk';
+import LoadingSpinner from "@/components/LoadingSpinner"; // Make sure to create this or use your existing loading spinner component
+
 import { useNavigation } from '@react-navigation/native';
 import SideMenu from '@/components/SideMenu';
-
-
 
 export default function Layout() {
     const [menuVisible, setMenuVisible] = useState(false);
     const navigation = useNavigation();
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [user, setUser] = useState(null); // Add user state
+    const [authLoading, setAuthLoading] = useState(true); // Add authLoading state
 
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            console.log("🔥 onAuthStateChanged triggered");
+            if (firebaseUser) {
+                // @ts-ignore
+                setUser(firebaseUser);
+                console.log("✅ firebaseUser exists", firebaseUser);
 
-    const termsAndConditionsDialogOptions: TermsAndConditionsDialogOptions = {
-        title: 'Required Terms and Conditions',
-        companyName: 'EasyLife',
-        showOnlyDisclaimer: true,
-    };
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
 
-    // const navigateToScreen = () => {
-    //     navigation.navigate('NavigationScreen', {
-    //         termsAndConditionsDialogOptions: termsAndConditionsDialogOptions,
-    //     });
-    // };
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    if (userData.profilePicUrl) {
+                        // If profilePicUrl exists, set the selectedImage state
+                        setSelectedImage(userData.profilePicUrl);
+                        console.log("Image Fetched");
+                    }
+                }
+            }
+            setAuthLoading(false); // Set authLoading to false after user state is fetched
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // If authentication is still loading, show a spinner
+    if (authLoading) return <LoadingSpinner />;
 
     // Top Left Settings button for home.tsx
     const HeaderLeft = () => {
@@ -49,7 +63,6 @@ export default function Layout() {
     const HeaderRight = () => {
         const { theme } = useTheme();
 
-
         function profileClick() {
             setMenuVisible(!menuVisible);
         }
@@ -59,7 +72,7 @@ export default function Layout() {
                 <TouchableOpacity onPress={() => profileClick()}>
                     <Image
                         source={{
-                            uri: "https://upload.wikimedia.org/wikipedia/en/a/a6/Pok%C3%A9mon_Pikachu_art.png",
+                            uri: selectedImage || "https://upload.wikimedia.org/wikipedia/en/a/a6/Pok%C3%A9mon_Pikachu_art.png",
                         }}
                         className="w-10 h-10 rounded-full"
                     />
@@ -95,26 +108,25 @@ export default function Layout() {
     };
 
     return (
-            <Provider>
-                <ThemeProvider>
-                    <Stack
-                        screenOptions={{
-                            headerTitle: () => <View />, // Removes the default title
-                            headerTransparent: true, // Makes header see-through
-                            headerRight: () => <HeaderRight />,
-                            headerBackTitle: "Back",
+        <Provider>
+            <ThemeProvider>
+                <Stack
+                    screenOptions={{
+                        headerTitle: () => <View />, // Removes the default title
+                        headerTransparent: true, // Makes header see-through
+                        headerRight: () => <HeaderRight />,
+                        headerBackTitle: "Back",
+                    }}
+                >
+                    {/* Override `headerLeft` for home.tsx only */}
+                    <Stack.Screen
+                        name="Public/home"
+                        options={{
+                            headerLeft: () => <HeaderLeft />,
                         }}
-                    >
-                        {/* Override `headerLeft` for home.tsx only */}
-                        <Stack.Screen
-                            name="Public/home"
-                            options={{
-                                headerLeft: () => <HeaderLeft />,
-                            }}
-                        />
-                    </Stack>
-
-                </ThemeProvider>
-            </Provider>
+                    />
+                </Stack>
+            </ThemeProvider>
+        </Provider>
     );
 }

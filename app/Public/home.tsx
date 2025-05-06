@@ -59,7 +59,7 @@ export default function Home() {
             <View className="justify-center items-center mt-4">
                 {/* Custom Button */}
                 <Pressable
-                    onPress={() => router.push("/Public/new-screen")} // Navigate to new screen
+                    onPress={() => router.push("/EnterUserDetails")} // Navigate to new screen
                     className="bg-reports justify-center items-center"
                     style={{
                         width: 360,
