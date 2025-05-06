@@ -14,7 +14,7 @@ export default function Index() {
                 // If the user is not authenticated, navigate to the register page
                 // @ts-ignore
                 // router.replace("register");
-                router.replace("/EnterUserDetails");
+                router.replace("/login");
             }
         });
 

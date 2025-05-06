@@ -100,20 +100,47 @@ export default function ChooseProfilePicture() {
     };
 
     // Upload Picture to Firebase
+    const getBlobFroUri = async (uri: string) => {
+        const blob = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.onload = function () {
+                resolve(xhr.response);
+            };
+            xhr.onerror = function (e) {
+                reject(new TypeError("Network Error"));
+            };
+            xhr.responseType = "blob";
+            xhr.open("GET", uri, true);
+            xhr.send(null);
+        })
+        return blob;
+    }
+
     const handleSubmit = async () => {
+        console.log("Pressed")
         if (!selectedImage || !user?.uid) return;
 
         try {
-            const response = await fetch(selectedImage);
-            const blob = await response.blob();
+            // 1. Convert URI to Blob
+            const blob = await getBlobFroUri(selectedImage);
 
-            const filename = `profilePictures/${user.uid}.jpg`;
-            const storageRef = ref(storage, filename);
+            // 2. Create a reference in Firebase Storage
+            const storageRef = ref(storage, `profilePics/${user.uid}.jpg`);
 
-            await uploadBytes(storageRef, blob); // or uploadBytesResumable
+            // 3. Upload the blob
+            // @ts-ignore
+            await uploadBytes(storageRef, blob);
 
+            // 4. Get download URL
             const downloadURL = await getDownloadURL(storageRef);
-            console.log("✅ URL:", downloadURL);
+
+            // 5. Save download URL to Firestore
+            const userDocRef = doc(db, "users", user.uid);
+            await setDoc(userDocRef, {
+                profilePicUrl: downloadURL
+            }, { merge: true });
+
+            console.log("✅ Profile picture uploaded successfully!");
         } catch (e) {
             console.error("🔥 Upload error:", e);
         }
