@@ -123,12 +123,6 @@ export default function Layout() {
                         headerLeft: () => <HeaderLeft />,
                     }}
                 >
-                    <Stack.Screen
-                        name="Public/home"
-                        options={{
-                            headerLeft: () => null,
-                        }}
-                    />
                 </Stack>
             </ThemeProvider>
         </Provider>
