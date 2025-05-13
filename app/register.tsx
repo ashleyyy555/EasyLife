@@ -23,7 +23,7 @@ export default function Register() {
             await createUserWithEmailAndPassword(auth, email, password);
             Alert.alert("Account Created!");
             // 🚀 Navigate to login or dashboard
-            router.replace('/Public/home');
+            router.replace('/EnterUserDetails');
         } catch (error: any) {
             Alert.alert("Registration Failed", error.message);
         } finally {

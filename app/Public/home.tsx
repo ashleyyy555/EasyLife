@@ -13,10 +13,7 @@ export default function Home() {
 
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
-            <View className="items-center">
-                <Image source={require("../../assets/images/EasyLife-logo.png")} style={{ width: '70%', height: '20%', marginTop: 30 }}/>
-            </View>
-            <View className="justify-center items-center">
+            <View className="justify-center items-center" style={{ marginTop: 120 }}>
                 {/* Custom Button */}
                 <Pressable
                     onPress={() => router.push("/Public/emergencyReport")} // Navigate to new screen

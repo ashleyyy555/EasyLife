@@ -8,26 +8,23 @@ import {auth, db} from "@/FirebaseConfig";
 import {router} from "expo-router"; // use your config here
 
 
-export default function EnterUserDetails() {
+export default function EnterMedicalInformation() {
     const { theme } = useTheme();
 
     const [user, setUser] = useState(null);
     const [userId, setUserId] = useState("");
 
-
-
     // User Details
-    const [fullName, setFullName] = useState("");
-    const [icNumber, setIcNumber] = useState("");
-    const [address, setAddress] = useState("");
-    const [state, setState] = useState("");
-    const [postCode, setPostCode] = useState("");
-    const [phone, setPhone] = useState("");
-    const [gender, setGender] = useState("");
-    const [birthday, setBirthday] = useState<Date | null>(null);
+    const [bloodType, setBloodType] = useState("");
+    const [emergencyContact, setEmergencyContact] = useState("");
+    const [allergies, setAllergies] = useState("");
+    const [medication, setMedication] = useState("");
+    const [medicalCondition, setMedicalCondition] = useState("");
+    const [dnrStatus, setDnrStatus] = useState("");
 
-    const handleGenderChange = (value: string) => {
-        setGender(value); // Update gender selection
+
+    const handleDnrStatus = (value: string) => {
+        setDnrStatus(value); // Update gender selection
     };
 
 
@@ -45,120 +42,92 @@ export default function EnterUserDetails() {
 
 
 
-    const calculateBirthday = () => {
-        const birthDateStr = icNumber.slice(0, 6);
-
-        const day = parseInt(birthDateStr.slice(0, 2));
-        const month = parseInt(birthDateStr.slice(2, 4));
-        const year = parseInt(birthDateStr.slice(4, 6));
-
-        const fullYear = year < 50 ? 2000 + year : 1900 + year;
-
-        const date = new Date(fullYear, month - 1, day);
-        setBirthday(date); // Set the value in state
-    };
-
-    useEffect(() => {
-        if (icNumber.length >= 6) {
-            calculateBirthday();
-        }
-    }, [icNumber]);
 
     const handleSubmit = async () => {
-        if (
-            fullName.trim() === '' ||
-            icNumber.trim() === '' ||
-            address.trim() === '' ||
-            state.trim() === '' ||
-            postCode.trim() === '' ||
-            phone.trim() === '' ||
-            gender.trim() === ''
-        ) {
-            console.log('Please fill in all fields.');
-            return;
-        }
-
-        try {
-            await setDoc(doc(db, 'users', userId), {
-                fullName,
-                icNumber,
-                address,
-                state,
-                postCode,
-                phone,
-                gender,
-                birthday,
-                init: true
-            },
-                { merge : true}
-            );
-
-            console.log('Data saved under user ID:', userId);
-            router.push("/ChooseProfilePicture");
-        } catch (error) {
-            console.error('Error uploading data:', error);
-        }
+        // if (
+        //     fullName.trim() === '' ||
+        //     icNumber.trim() === '' ||
+        //     address.trim() === '' ||
+        //     state.trim() === '' ||
+        //     postCode.trim() === '' ||
+        //     phone.trim() === '' ||
+        //     gender.trim() === ''
+        // ) {
+        //     console.log('Please fill in all fields.');
+        //     return;
+        // }
+        //
+        // try {
+        //     await setDoc(doc(db, 'users', userId), {
+        //             fullName,
+        //             icNumber,
+        //             address,
+        //             state,
+        //             postCode,
+        //             phone,
+        //             gender,
+        //             birthday,
+        //             init: true
+        //         },
+        //         { merge : true}
+        //     );
+        //
+        //     console.log('Data saved under user ID:', userId);
+        //     router.push("/ChooseProfilePicture");
+        // } catch (error) {
+        //     console.error('Error uploading data:', error);
+        // }
+        // router.replace("/Public/home");
     };
 
     return (
         <View className="flex-1 justify-center" style={{ backgroundColor: theme.background }}>
             <View className="flex-1 justify-center px-4" style={{ backgroundColor: theme.background }}>
                 <View className="items-center">
-                    <Text className="text-4xl font-bold mb-2" style={{ color: theme.text }}>Enter User Details</Text>
+                    <Text className="text-4xl font-bold mb-2" style={{ color: theme.text }}>Enter Medical Records</Text>
                     <TextInput
                         className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"
-                        value={fullName}
-                        onChangeText={setFullName}
-                        placeholder="Full Name"
+                        value={bloodType}
+                        onChangeText={setBloodType}
+                        placeholder="Blood Type"
                         placeholderTextColor="#888"
                     />
 
                     <TextInput
                         className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"
-                        value={icNumber}
-                        onChangeText={setIcNumber}
-                        placeholder="IC Number"
+                        value={emergencyContact}
+                        onChangeText={setEmergencyContact}
+                        placeholder="Emergency Contact"
                         placeholderTextColor="#888"
                     />
 
                     <TextInput
                         className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"
-                        value={address}
-                        onChangeText={setAddress}
-                        placeholder="Address Line"
+                        value={allergies}
+                        onChangeText={setAllergies}
+                        placeholder="Allergies"
                         placeholderTextColor="#888"
                     />
 
-                    <View className="flex-row">
-                        <TextInput
-                            className="h-10 my-3 mr-12 border px-2.5 text-black bg-white w-full flex-1 rounded"
-                            value={state}
-                            onChangeText={setState}
-                            placeholder="State"
-                            placeholderTextColor="#888"
-                        />
-
-                        <TextInput
-                            className="h-10 my-3 border px-2.5 text-black bg-white w-full flex-1 rounded"
-                            value={postCode}
-                            keyboardType={"numeric"}
-                            onChangeText={setPostCode}
-                            placeholder="Post Code"
-                            placeholderTextColor="#888"
-                        />
-                    </View>
+                    <TextInput
+                        className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"
+                        value={medication}
+                        onChangeText={setMedication}
+                        placeholder="Current Medication"
+                        placeholderTextColor="#888"
+                    />
 
                     <TextInput
                         className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"
-                        value={phone}
-                        onChangeText={setPhone}
-                        placeholder="Phone Number"
+                        value={medicalCondition}
+                        onChangeText={setMedicalCondition}
+                        placeholder="Medical Condition"
                         placeholderTextColor="#888"
                     />
 
                     <View className="flex-row justify-center items-center">
                         {/* Gender Label */}
-                        <Text className="text-l font-bold mr-3" style={{color : theme.text}}>Gender:</Text>
+                        <Text className="text-l font-bold mr-3" style={{color : theme.text}}>DNR Status:</Text>
 
                         {/* Male Radio Button */}
                         <View style={{ flexDirection: "row", alignItems: "center", marginRight: 15 }}>
@@ -172,14 +141,14 @@ export default function EnterUserDetails() {
                                 }}
                             >
                                 <RadioButton
-                                    value="Male"
-                                    status={gender === "Male" ? "checked" : "unchecked"}
-                                    onPress={() => handleGenderChange("Male")}
+                                    value="Yes"
+                                    status={dnrStatus === "Yes" ? "checked" : "unchecked"}
+                                    onPress={() => handleDnrStatus("Yes")}
                                     color="#3498db" // Custom color for the checked radio button
                                     uncheckedColor="#3498db" // Color for the unchecked state border
                                 />
                             </View>
-                            <Text style={{color : theme.text}}>Male</Text>
+                            <Text style={{color : theme.text}}>Yes</Text>
                         </View>
 
                         {/* Female Radio Button */}
@@ -194,14 +163,14 @@ export default function EnterUserDetails() {
                                 }}
                             >
                                 <RadioButton
-                                    value="Female"
-                                    status={gender === "Female" ? "checked" : "unchecked"}
-                                    onPress={() => handleGenderChange("Female")}
+                                    value="No"
+                                    status={dnrStatus === "No" ? "checked" : "unchecked"}
+                                    onPress={() => handleDnrStatus("No")}
                                     color="#3498db"
                                     uncheckedColor="#3498db"
                                 />
                             </View>
-                            <Text style={{color : theme.text}}>Female</Text>
+                            <Text style={{color : theme.text}}>No</Text>
                         </View>
                     </View>
 
@@ -209,11 +178,11 @@ export default function EnterUserDetails() {
                 </View>
 
 
-                <View className="flex-row justify-center items-center">
+                <View className="flex-row justify-center items-center gap-x-4 mt-4">
                     <Pressable onPress={handleSubmit} className="bg-blue-600 px-4 py-2 rounded mt-2">
                         <Text className="text-white font-semibold">Submit</Text>
                     </Pressable>
-                    <Pressable onPress={() => router.push("/ChooseProfilePicture")} className="bg-blue-600 px-4 py-2 rounded mt-2">
+                    <Pressable onPress={() => {router.replace("/Public/home")}} className="bg-blue-600 px-4 py-2 rounded mt-2">
                         <Text className="text-white font-semibold">Skip</Text>
                     </Pressable>
                 </View>

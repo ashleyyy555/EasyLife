@@ -9,6 +9,8 @@ import { auth, db } from "@/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { Portal, Provider } from 'react-native-paper';
 import LoadingSpinner from "@/components/LoadingSpinner"; // Make sure to create this or use your existing loading spinner component
+import { ProfileProvider } from "@/context/ProfileContext"; // Import ProfileProvider
+
 
 import { useNavigation } from '@react-navigation/native';
 import SideMenu from '@/components/SideMenu';
@@ -33,6 +35,7 @@ export default function Layout() {
 
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
+                    console.log("userDoc exists")
                     if (userData.profilePicUrl) {
                         // If profilePicUrl exists, set the selectedImage state
                         setSelectedImage(userData.profilePicUrl);
@@ -112,17 +115,18 @@ export default function Layout() {
             <ThemeProvider>
                 <Stack
                     screenOptions={{
+                        headerShown: false,
                         headerTitle: () => <View />, // Removes the default title
                         headerTransparent: true, // Makes header see-through
                         headerRight: () => <HeaderRight />,
                         headerBackTitle: "Back",
+                        headerLeft: () => <HeaderLeft />,
                     }}
                 >
-                    {/* Override `headerLeft` for home.tsx only */}
                     <Stack.Screen
                         name="Public/home"
                         options={{
-                            headerLeft: () => <HeaderLeft />,
+                            headerLeft: () => null,
                         }}
                     />
                 </Stack>

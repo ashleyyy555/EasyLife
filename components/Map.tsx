@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
-import CarMarker from "@/components/CarMarker";
+import CarMarker from "./CarMarker";
 
 const Map = () => {
     const [region, setRegion] = useState<Region | null>(null);

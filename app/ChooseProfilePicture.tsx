@@ -143,6 +143,7 @@ export default function ChooseProfilePicture() {
             }, { merge: true });
 
             console.log("✅ Profile picture uploaded successfully!");
+            router.push("/EnterMedicalInformation");
         } catch (e) {
             console.error("🔥 Upload error:", e);
         }
@@ -227,7 +228,7 @@ export default function ChooseProfilePicture() {
                         <Text className="text-white font-semibold">Next</Text>
                     </Pressable>
 
-                    <Pressable onPress={() => router.push("/Public/home")} className="bg-blue-600 px-4 py-2 rounded mt-2">
+                    <Pressable onPress={() => router.push("/EnterMedicalInformation")} className="bg-blue-600 px-4 py-2 rounded mt-2">
                         <Text className="text-white font-semibold">Skip</Text>
                     </Pressable>
                 </View>

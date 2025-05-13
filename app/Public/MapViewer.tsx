@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig"; // use your config here
-import Map from "./Map";
+import Map from "@/components/Map";
 
 export default function MapViewer() {
     const { theme } = useTheme();
