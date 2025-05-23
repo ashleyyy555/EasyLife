@@ -24,6 +24,7 @@ export default function NewScreen() {
         return () => unsubscribe();
     }, []);
 
+
     const fetchGender = async (uid: string) => {
         try {
             const docRef = doc(db, "users", uid);
@@ -60,6 +61,7 @@ export default function NewScreen() {
             <Text className="mb-4" style={{ color: theme.text }}>
                 Current Gender: <Text className="font-semibold" style={{ color: theme.text }}>{currentGender || "Not set"}</Text>
             </Text>
+
 
             <TextInput
                 className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"

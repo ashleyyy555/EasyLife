@@ -14,6 +14,36 @@ export default function emergencyReport() {
     const [user, setUser] = useState(null);
     const [userId, setUserId] = useState("");
 
+    const [text, setText] = useState('');
+
+    useEffect(() => {
+        fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
+            .then(response => response.text())  // Get response as text
+            .then(data => {
+                setText(data);
+            })
+            .catch(err => {
+                setText('Error fetching data');
+            });
+    }, []);
+
+    const sendReportId = async (reportId:number) => {
+        try {
+            const response = await fetch('https://easylife-express-production.up.railway.app/report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',  // Tell server we are sending JSON
+                },
+                body: JSON.stringify({ reportId }),    // Send the reportId variable
+            });
+
+            const data = await response.json();
+            console.log('Response from server:', data);
+        } catch (error) {
+            console.error('Error sending report:', error);
+        }
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
@@ -79,10 +109,12 @@ export default function emergencyReport() {
                     latitude: region.latitude,
                     longitude: region.longitude,
                 },
+                classification: [],
                 transcribedText: "Test",  // Default value
-                status: "Test",           // Default value
+                status: "Complete",           // Default value
             });
 
+            sendReportId(reportId);
             console.log("Report submitted with ID:", reportId);
 
         } catch (error) {
@@ -94,6 +126,8 @@ export default function emergencyReport() {
         <View className="flex-1 justify-center items-center px-4" style={{ backgroundColor: theme.background }}>
             <Text className="text-xl font-bold mb-2" style={{ color : theme.text }}>Report Emergency</Text>
             <Text className="text-l mb-2" style={{ color : theme.text }}>User Id = {userId} </Text>
+
+            <Text className="text-xl font-bold mb-2" style={{ color : theme.text }}>{text}</Text>
 
             <Pressable onPress={handleSubmit} className="bg-red-600 px-4 py-2 rounded mt-2">
                 <Text className="text-white font-semibold">Submit Report</Text>

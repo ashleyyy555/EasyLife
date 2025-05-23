@@ -16,6 +16,7 @@ export default function EnterMedicalInformation() {
 
     // User Details
     const [bloodType, setBloodType] = useState("");
+    const [emergencyContactName, setEmergencyContactName] = useState("");
     const [emergencyContact, setEmergencyContact] = useState("");
     const [allergies, setAllergies] = useState("");
     const [medication, setMedication] = useState("");
@@ -44,40 +45,38 @@ export default function EnterMedicalInformation() {
 
 
     const handleSubmit = async () => {
-        // if (
-        //     fullName.trim() === '' ||
-        //     icNumber.trim() === '' ||
-        //     address.trim() === '' ||
-        //     state.trim() === '' ||
-        //     postCode.trim() === '' ||
-        //     phone.trim() === '' ||
-        //     gender.trim() === ''
-        // ) {
-        //     console.log('Please fill in all fields.');
-        //     return;
-        // }
-        //
-        // try {
-        //     await setDoc(doc(db, 'users', userId), {
-        //             fullName,
-        //             icNumber,
-        //             address,
-        //             state,
-        //             postCode,
-        //             phone,
-        //             gender,
-        //             birthday,
-        //             init: true
-        //         },
-        //         { merge : true}
-        //     );
-        //
-        //     console.log('Data saved under user ID:', userId);
-        //     router.push("/ChooseProfilePicture");
-        // } catch (error) {
-        //     console.error('Error uploading data:', error);
-        // }
-        // router.replace("/Public/home");
+        if (
+            bloodType.trim() === '' ||
+            emergencyContactName.trim() === '' ||
+            emergencyContact.trim() === '' ||
+            allergies.trim() === '' ||
+            medication.trim() === '' ||
+            medicalCondition.trim() === '' ||
+            dnrStatus.trim() === ''
+        ) {
+            console.log('Please fill in all fields.');
+            return;
+        }
+
+        try {
+            await setDoc(doc(db, 'users', userId, 'MedicalInformation', 'main'), {
+                    bloodType,
+                    emergencyContactName,
+                    emergencyContact,
+                    allergies,
+                    medication,
+                    medicalCondition,
+                    dnrStatus,
+                },
+                { merge : true }
+            );
+
+            console.log('Data saved under user ID:', userId);
+            router.push("/Public/home");
+        } catch (error) {
+            console.error('Error uploading data:', error);
+        }
+        router.replace("/Public/home");
     };
 
     return (
@@ -90,6 +89,14 @@ export default function EnterMedicalInformation() {
                         value={bloodType}
                         onChangeText={setBloodType}
                         placeholder="Blood Type"
+                        placeholderTextColor="#888"
+                    />
+
+                    <TextInput
+                        className="h-10 my-3 border px-2.5 text-black bg-white w-full rounded"
+                        value={emergencyContactName}
+                        onChangeText={setEmergencyContactName}
+                        placeholder="Emergency Contact Name"
                         placeholderTextColor="#888"
                     />
 
