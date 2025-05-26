@@ -140,7 +140,7 @@ export default function emergencyReport() {
                     latitude: region.latitude,
                     longitude: region.longitude,
                 },
-                classification: [],
+                classification: ["police"],
                 transcribedText: "Test",  // Default value
                 status: "Complete",           // Default value
             });
