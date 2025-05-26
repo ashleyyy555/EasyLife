@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable,  PermissionsAndroid, NativeModules, Platform } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -6,9 +6,6 @@ import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
-import {PermissionsAndroid, NativeModules } from "react-native";
-import { PermissionsAndroid, Platform } from "react-native";
-
 
 export default function emergencyReport() {
     const { theme } = useTheme();
