@@ -6,6 +6,8 @@ import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
+import {PermissionsAndroid, NativeModules } from "react-native";
+import { PermissionsAndroid, Platform } from "react-native";
 
 
 export default function emergencyReport() {
@@ -15,6 +17,35 @@ export default function emergencyReport() {
     const [userId, setUserId] = useState("");
 
     const [text, setText] = useState('');
+
+    //Request mic permission for listening
+    const requestMicPermission = async () => {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          console.warn('Microphone permission denied');
+        }
+      }
+    };
+
+    //Call speech-to-text, (not yet) connect to button
+    const { VoskModule } = NativeModules;
+    const startVoiceRecognition = () => {
+      if (VoskModule && VoskModule.startListening) {
+        VoskModule.startListening();
+      } else {
+        console.warn('VoskModule is not available');
+      }
+    };
+
+//  This is a Stop-listening function, (yet) connect to button
+//     const stopVoiceRecognition = () => {
+//       if (VoskModule?.stopListening) {
+//         VoskModule.stopListening();
+//       }
+//     };
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
@@ -121,6 +152,8 @@ export default function emergencyReport() {
             console.error("Error submitting report:", error);
         }
     };
+
+
 
     return (
         <View className="flex-1 justify-center items-center px-4" style={{ backgroundColor: theme.background }}>
