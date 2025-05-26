@@ -18,6 +18,8 @@ buildscript {
         classpath('com.android.tools.build:gradle')
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+        implementation 'com.alphacephei:vosk-android:0.3.47'
+
     }
 }
 
@@ -39,3 +41,4 @@ allprojects {
         maven { url 'https://www.jitpack.io' }
     }
 }
+
