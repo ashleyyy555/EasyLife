@@ -8,6 +8,7 @@ import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
 import {PermissionsAndroid, NativeModules } from "react-native";
 import { PermissionsAndroid, Platform } from "react-native";
+import { NativeModules, Alert } from "react-native";
 
 
 export default function emergencyReport() {
@@ -46,6 +47,20 @@ export default function emergencyReport() {
 //         VoskModule.stopListening();
 //       }
 //     };
+
+const { VoskModule } = NativeModules;
+
+const showTranscript = async () => {
+  try {
+    const content = await VoskModule.getTranscript();
+    Alert.alert("Transcript", content);
+  } catch (err) {
+    console.warn("Failed to read transcript:", err);
+  }
+};
+
+<Button title="Show Transcript" onPress={showTranscript} />
+
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
