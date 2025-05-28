@@ -31,7 +31,7 @@ export default function Home() {
             </View>
             <View className="flex-row justify-center items-center gap-x-7 mt-4">
                 <Pressable
-                    onPress={() => router.push("/Public/new-screen")} // Navigate to new screen
+                    onPress={() => router.push("/Public/ProfilePage")} // Navigate to new screen
                     className="bg-medical-records justify-center items-center"
                     style={{
                         width: 160,
