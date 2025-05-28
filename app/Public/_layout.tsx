@@ -94,7 +94,7 @@ export default function Layout() {
                     elevation: 0, // ✅ removes shadow on Android
                 },
                 headerTransparent: false,
-                headerRight: () => <HeaderRight />,
+                // headerRight: () => <HeaderRight />,
             }}
         >
             <Tabs.Screen
@@ -117,14 +117,28 @@ export default function Layout() {
                 }}
             />
             <Tabs.Screen
-                name="new-screen"
+                name="ProfilePage"
                 options={{
-                    title: "Tung",
-                    tabBarIcon: ({ color, size }) => (
+                title: "Profile",
+                tabBarIcon: ({ color, size }) => (
+                    selectedImage ? (
+                        <Image
+                            source={{ uri: selectedImage }}
+                            style={{
+                                width: size,
+                                height: size,
+                                borderRadius: size / 2, // Makes it circular
+                                borderWidth: 0,
+                                borderColor: color, // Optional: add border matching tabBar icon color
+                            }}
+                        />
+                    ) : (
                         <Ionicons name="person-outline" size={size} color={color} />
-                    ),
-                }}
-            />
+                    )
+                ),
+            }}
+                />
+
         </Tabs>
     );
 }
