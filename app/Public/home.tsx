@@ -3,17 +3,19 @@ import { useColorScheme } from "react-native";
 import {router} from "expo-router";
 import "../global.css";
 import {useTheme} from "@/context/ThemeContext";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export default function Home() {
     const { theme } = useTheme();
     const colorScheme = useColorScheme();
+    const insets = useSafeAreaInsets();
 
 
 
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
-            <View className="justify-center items-center" style={{ marginTop: 120 }}>
+            <View className="justify-center items-center" style={{ paddingTop: insets.top }}>
                 {/* Custom Button */}
                 <Pressable
                     onPress={() => router.push("/Public/emergencyReport")} // Navigate to new screen

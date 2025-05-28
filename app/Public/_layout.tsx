@@ -9,6 +9,8 @@ import { doc, getDoc } from "firebase/firestore";
 import SideMenu from '@/components/SideMenu';
 import { Portal } from 'react-native-paper';
 
+
+
 export default function Layout() {
     const [menuVisible, setMenuVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -85,9 +87,13 @@ export default function Layout() {
             screenOptions={{
                 headerTitle: '',
                 headerStyle: {
+                    backgroundColor: theme.background,
                     height: 100, // Adjust the height of the header here
+                    borderBottomWidth: 0, // ✅ removes border
+                    shadowColor: 'transparent', // ✅ removes shadow on iOS
+                    elevation: 0, // ✅ removes shadow on Android
                 },
-                headerTransparent: true,
+                headerTransparent: false,
                 headerRight: () => <HeaderRight />,
             }}
         >
