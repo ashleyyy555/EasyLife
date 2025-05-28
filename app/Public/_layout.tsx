@@ -116,6 +116,17 @@ export default function Layout() {
                     ),
                 }}
             />
+
+            <Tabs.Screen
+                name="emergencyReport"
+                options={{
+                    title: "Report",
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="map-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+
             <Tabs.Screen
                 name="ProfilePage"
                 options={{
