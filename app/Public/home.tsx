@@ -4,6 +4,8 @@ import {router} from "expo-router";
 import "../global.css";
 import {useTheme} from "@/context/ThemeContext";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MedicalRecordsIcon from "@/components/MedicalRecordsIcon";
+import LocationIcon from "@/components/LocationIcon";
 
 
 export default function Home() {
@@ -37,10 +39,7 @@ export default function Home() {
                         borderRadius: 35,
                     }}
                 >
-                    <Image
-                       source={require("@/assets/images/MedicalIcon.png")}
-                       style={{ width: 122, height: 122 }}
-                    />
+                    <MedicalRecordsIcon size={99}/>
                 </Pressable>
 
                 <Pressable
@@ -52,10 +51,7 @@ export default function Home() {
                         borderRadius: 35,
                     }}
                 >
-                    <Image
-                        source={require("@/assets/images/LocationIcon.png")}
-                        style={{ width: 99, height: 97 }}
-                    />
+                    <LocationIcon size={99}/>
                 </Pressable>
             </View>
 

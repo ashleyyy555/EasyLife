@@ -8,6 +8,8 @@ import { auth, db } from "@/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import SideMenu from '@/components/SideMenu';
 import { Portal } from 'react-native-paper';
+import MedicalRecordsIcon from "@/components/MedicalRecordsIcon"
+import LocationIcon from "@/components/LocationIcon";
 
 
 
@@ -112,7 +114,17 @@ export default function Layout() {
                 options={{
                     title: "Map",
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="map-outline" size={size} color={color} />
+                        <LocationIcon size={size} color={color} />
+                    ),
+                }}
+            />
+
+            <Tabs.Screen
+                name="MedicalRecords"
+                options={{
+                    title: "Records",
+                    tabBarIcon: ({ color, size }) => (
+                        <MedicalRecordsIcon color={color} size={size}/>
                     ),
                 }}
             />

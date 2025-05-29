@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 
-export default function NewScreen() {
+export default function ProfilePage() {
     const { theme } = useTheme();
 
     const [user, setUser] = useState(null);
@@ -362,7 +362,7 @@ export default function NewScreen() {
                 </View>
 
                 <View className="items-center mt-4">
-                    <TouchableOpacity className="bg-[#CE0303B8] p-4 rounded-lg items-center mt-2" style={{ width: "40%" }}>
+                    <TouchableOpacity className="bg-[#CE0303B8] p-4 rounded-lg items-center mt-2 mb-10" style={{ width: "40%" }}>
                         <Text className="text-white font-bold">Log Out</Text>
                     </TouchableOpacity>
                 </View>
