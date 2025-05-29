@@ -11,8 +11,6 @@ export default function Home() {
     const colorScheme = useColorScheme();
     const insets = useSafeAreaInsets();
 
-
-
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
             <View className="justify-center items-center" style={{ paddingTop: insets.top }}>
@@ -39,7 +37,10 @@ export default function Home() {
                         borderRadius: 35,
                     }}
                 >
-                    <Text className="text-white text-lg font-bold">+</Text>
+                    <Image
+                       source={require("@/assets/images/MedicalIcon.png")}
+                       style={{ width: 122, height: 122 }}
+                    />
                 </Pressable>
 
                 <Pressable
@@ -51,7 +52,10 @@ export default function Home() {
                         borderRadius: 35,
                     }}
                 >
-                    <Text className="text-white text-lg font-bold">-</Text>
+                    <Image
+                        source={require("@/assets/images/LocationIcon.png")}
+                        style={{ width: 99, height: 97 }}
+                    />
                 </Pressable>
             </View>
 

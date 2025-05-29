@@ -130,20 +130,21 @@ export default function Layout() {
             <Tabs.Screen
                 name="ProfilePage"
                 options={{
-                title: "Profile",
-                tabBarIcon: ({ color, size }) => (
-                    selectedImage ? (
-                        <Image
-                            source={{ uri: selectedImage }}
-                            style={{
-                                width: size,
-                                height: size,
-                                borderRadius: size / 2, // Makes it circular
-                                borderWidth: 0,
-                                borderColor: color, // Optional: add border matching tabBar icon color
-                            }}
-                        />
-                    ) : (
+                    headerTransparent: false,
+                    title: "Profile",
+                    tabBarIcon: ({ color, size }) => (
+                        selectedImage ? (
+                            <Image
+                                source={{ uri: selectedImage }}
+                                style={{
+                                    width: size,
+                                    height: size,
+                                    borderRadius: size / 2, // Makes it circular
+                                    borderWidth: 0,
+                                    borderColor: color, // Optional: add border matching tabBar icon color
+                                }}
+                            />
+                        ) : (
                         <Ionicons name="person-outline" size={size} color={color} />
                     )
                 ),

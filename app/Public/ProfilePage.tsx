@@ -183,7 +183,7 @@ export default function NewScreen() {
                                         source={
                                             selectedImage
                                                 ? { uri: selectedImage }
-                                                : require("@/assets/images/lzj.jpeg")
+                                                : require("@/assets/images/cloud-upload-outline.jpg")
                                         }
                                         style={{ width: 100, height: 100, borderRadius: 150, borderColor: theme.text, borderWidth: 2 }}
                                     />
