@@ -8,8 +8,10 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 
 import com.facebook.react.bridge.*;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import org.vosk.Model;
 import org.vosk.Recognizer;
@@ -24,12 +26,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.FloatBuffer;
 import java.util.Collections;
-
-import ai.onnxruntime.*;
-import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import ai.onnxruntime.*;
+
+
 
 public class VoskModule extends ReactContextBaseJavaModule implements RecognitionListener {
 
@@ -206,6 +209,28 @@ public class VoskModule extends ReactContextBaseJavaModule implements Recognitio
     public void onFinalResult(String hypothesis) {
         Log.d("Vosk", "Final: " + hypothesis);
         saveTranscript(hypothesis);
+
+        try {
+            float[] vector = buildTfIdfVector(hypothesis);
+            long predictedIndex = classify(vector);
+
+            InputStream is = reactContext.getAssets().open("label_classes.json");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            StringBuilder jsonBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                jsonBuilder.append(line);
+            }
+            reader.close();
+            is.close();
+
+            JSONArray labelArray = new JSONArray(jsonBuilder.toString());
+            String label = labelArray.getString((int) predictedIndex);
+            sendEventToJS("onPrediction", label);
+
+        } catch (Exception e) {
+            Log.e("Vosk", "Error during classification in onFinalResult", e);
+        }
     }
 
     @Override
