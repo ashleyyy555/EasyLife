@@ -6,6 +6,7 @@ import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
+import { DeviceEventEmitter } from 'react-native';
 
 export default function emergencyReport() {
     const { theme } = useTheme();
@@ -43,6 +44,13 @@ export default function emergencyReport() {
 //         VoskModule.stopListening();
 //       }
 //     };
+
+    const [prediction, setPrediction] = useState('');
+    useEffect(() => {
+  const subscription = DeviceEventEmitter.addListener('onPrediction', (label: string) => {
+    console.log('Predicted category of the case:', label);
+    setPrediction(label);
+  });
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
