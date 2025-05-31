@@ -37,7 +37,8 @@ export default function emergencyReport() {
         console.warn('VoskModule is not available');
       }
     };
-
+    
+    // where we receives the label and transcription text from android
     const [prediction, setPrediction] = useState('');
     const [transcription, setTranscription] = useState('');
     useEffect(() => {
