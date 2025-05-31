@@ -9,6 +9,8 @@ import androidx.core.app.ActivityCompat;
 
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+import com.facebook.react.bridge.WritableMap; //optional
+import com.facebook.react.bridge.Arguments; //optional
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -226,7 +228,12 @@ public class VoskModule extends ReactContextBaseJavaModule implements Recognitio
 
             JSONArray labelArray = new JSONArray(jsonBuilder.toString());
             String label = labelArray.getString((int) predictedIndex);
-            sendEventToJS("onPrediction", label);
+            
+            // Emit transcription + label together
+            WritableMap result = Arguments.createMap();
+            result.putString("transcription", hypothesis);
+            result.putString("label", label);
+            sendEventToJS("onPrediction", result);
 
         } catch (Exception e) {
             Log.e("Vosk", "Error during classification in onFinalResult", e);
