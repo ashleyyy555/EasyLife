@@ -6,6 +6,7 @@ import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
+import { DeviceEventEmitter } from 'react-native';
 
 export default function emergencyReport() {
     const { theme } = useTheme();
@@ -36,6 +37,21 @@ export default function emergencyReport() {
         console.warn('VoskModule is not available');
       }
     };
+    
+    // where we receives the label and transcription text from android
+    const [prediction, setPrediction] = useState('');
+    const [transcription, setTranscription] = useState('');
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener('onPrediction', (data: { label: string, transcription: string }) => {
+            console.log('Predicted category of the case:', data.label);
+            console.log('Transcription:', data.transcription);
+            setPrediction(data.label);
+            setTranscription(data.transcription);
+        });
+
+        return () => subscription.remove();
+    }, []);
+    
 
 //  This is a Stop-listening function, (yet) connect to button
 //     const stopVoiceRecognition = () => {
@@ -137,9 +153,9 @@ export default function emergencyReport() {
                     latitude: region.latitude,
                     longitude: region.longitude,
                 },
-                classification: ["police"],
-                transcribedText: "Test",  // Default value
-                status: "Complete",           // Default value
+                classification: [prediction || "unknown"], // autio fill in the prediction
+                transcribedText: transcription || "N/A",  // autio fill in the transcription
+                status: "Complete",           
             });
 
             sendReportId(reportId);
