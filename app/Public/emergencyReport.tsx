@@ -38,19 +38,26 @@ export default function emergencyReport() {
       }
     };
 
+    const [prediction, setPrediction] = useState('');
+    const [transcription, setTranscription] = useState('');
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener('onPrediction', (data: { label: string, transcription: string }) => {
+            console.log('Predicted category of the case:', data.label);
+            console.log('Transcription:', data.transcription);
+            setPrediction(data.label);
+            setTranscription(data.transcription);
+        });
+
+        return () => subscription.remove();
+    }, []);
+    
+
 //  This is a Stop-listening function, (yet) connect to button
 //     const stopVoiceRecognition = () => {
 //       if (VoskModule?.stopListening) {
 //         VoskModule.stopListening();
 //       }
 //     };
-
-    const [prediction, setPrediction] = useState('');
-    useEffect(() => {
-  const subscription = DeviceEventEmitter.addListener('onPrediction', (label: string) => {
-    console.log('Predicted category of the case:', label);
-    setPrediction(label);
-  });
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
@@ -145,9 +152,9 @@ export default function emergencyReport() {
                     latitude: region.latitude,
                     longitude: region.longitude,
                 },
-                classification: ["police"],
-                transcribedText: "Test",  // Default value
-                status: "Complete",           // Default value
+                classification: [prediction || "unknown"], // autio fill in the prediction
+                transcribedText: transcription || "N/A",  // autio fill in the transcription
+                status: "Complete",           
             });
 
             sendReportId(reportId);
