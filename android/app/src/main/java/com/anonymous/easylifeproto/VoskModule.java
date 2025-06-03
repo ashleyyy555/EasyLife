@@ -23,7 +23,13 @@ import org.vosk.android.StorageService;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.BufferedReader;
 import java.io.IOException;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.FloatBuffer;
@@ -33,6 +39,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import ai.onnxruntime.*;
+
 
 
 
@@ -194,6 +201,28 @@ public class VoskModule extends ReactContextBaseJavaModule implements Recognitio
             Log.d("Vosk", "Transcript saved to: " + file.getAbsolutePath());
         } catch (IOException e) {
             Log.e("Vosk", "Failed to save transcript", e);
+        }
+    }
+
+
+    public void getTranscript(Promise promise) {
+        File file = new File(reactContext.getFilesDir(), "transcript.txt");
+
+        try {
+            StringBuilder content = new StringBuilder();
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+
+            reader.close();
+            promise.resolve(content.toString());
+
+        } catch (IOException e) {
+            Log.e("Vosk", "Error reading transcript", e);
+            promise.reject("READ_ERROR", "Failed to read transcript.txt", e);
         }
     }
 
