@@ -30,6 +30,7 @@ export default function Home() {
     const [reportFor, setReportFor] = useState("");
     const [voiceRecognitionModalVisible, setVoiceRecognitionModalVisible] = useState(false);
     const reportForMyself = () => {
+        requestMicPermission();
         setReportFor("Myself");
         setReportModalVisible(false);
         setVoiceRecognitionModalVisible(true);
@@ -39,6 +40,7 @@ export default function Home() {
     // Select Location Message Modal
     const [selectLocationMessageModalVisible, setSelectLocationMessageModalVisible] = useState(false);
     const reportForOthers = () => {
+        requestMicPermission();
         setReportFor("Others");
         setReportModalVisible(false);
         setSelectLocationMessageModalVisible(true)
@@ -110,11 +112,11 @@ export default function Home() {
 
 
 //  This is a Stop-listening function, (yet) connect to button
-//     const stopVoiceRecognition = () => {
-//       if (VoskModule?.stopListening) {
-//         VoskModule.stopListening();
-//       }
-//     };
+    const stopVoiceRecognition = () => {
+      if (VoskModule?.stopListening) {
+        VoskModule.stopListening();
+      }
+    };
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
@@ -383,8 +385,14 @@ export default function Home() {
                         }}
                     >
                         <Pressable
-                            onPressIn={() => console.log("Holding down")}
-                            onPressOut={() => console.log("Released")}
+                            onPressIn={() => {
+                                console.log("Hodling Down");
+                                startVoiceRecognition();
+                            }}
+                            onPressOut={() => {
+                                console.log("Released");
+                                stopVoiceRecognition();
+                            }}
                             style={{
                                 marginTop: 12,
                                 padding: 10,
