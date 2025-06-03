@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, Button, Platform, PermissionsAndroid, NativeModules, Alert } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -6,18 +6,14 @@ import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; // use your config here
-import {PermissionsAndroid, NativeModules } from "react-native";
-import { PermissionsAndroid, Platform } from "react-native";
-import { NativeModules, Alert } from "react-native";
-
 
 export default function emergencyReport() {
     const { theme } = useTheme();
-
+    const { VoskModule } = NativeModules;
     const [user, setUser] = useState(null);
     const [userId, setUserId] = useState("");
-
     const [text, setText] = useState('');
+    const [isListening, setIsListening] = useState(false);
 
     //Request mic permission for listening
     const requestMicPermission = async () => {
@@ -27,40 +23,50 @@ export default function emergencyReport() {
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
           console.warn('Microphone permission denied');
+          return false;
         }
+        return true;
       }
+      return true;
     };
 
-    //Call speech-to-text, (not yet) connect to button
-    const { VoskModule } = NativeModules;
-    const startVoiceRecognition = () => {
+    const startVoiceRecognition = async () => {
+      const hasPermission = await requestMicPermission();
+      if (!hasPermission) return;
+
       if (VoskModule && VoskModule.startListening) {
-        VoskModule.startListening();
+        try {
+          VoskModule.startListening();
+          setIsListening(true);
+          console.log('Started listening');
+        } catch (error) {
+          console.error('Error starting voice recognition:', error);
+        }
       } else {
         console.warn('VoskModule is not available');
       }
     };
 
-//  This is a Stop-listening function, (yet) connect to button
-//     const stopVoiceRecognition = () => {
-//       if (VoskModule?.stopListening) {
-//         VoskModule.stopListening();
-//       }
-//     };
+    const stopVoiceRecognition = () => {
+      if (VoskModule?.stopListening) {
+        try {
+          VoskModule.stopListening();
+          setIsListening(false);
+          console.log('Stopped listening');
+        } catch (error) {
+          console.error('Error stopping voice recognition:', error);
+        }
+      }
+    };
 
-const { VoskModule } = NativeModules;
-
-const showTranscript = async () => {
-  try {
-    const content = await VoskModule.getTranscript();
-    Alert.alert("Transcript", content);
-  } catch (err) {
-    console.warn("Failed to read transcript:", err);
-  }
-};
-
-<Button title="Show Transcript" onPress={showTranscript} />
-
+    const showTranscript = async () => {
+      try {
+        const content = await VoskModule.getTranscript();
+        Alert.alert("Transcript", content);
+      } catch (err) {
+        console.warn("Failed to read transcript:", err);
+      }
+    };
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
@@ -168,14 +174,24 @@ const showTranscript = async () => {
         }
     };
 
-
-
     return (
         <View className="flex-1 justify-center items-center px-4" style={{ backgroundColor: theme.background }}>
             <Text className="text-xl font-bold mb-2" style={{ color : theme.text }}>Report Emergency</Text>
             <Text className="text-l mb-2" style={{ color : theme.text }}>User Id = {userId} </Text>
 
             <Text className="text-xl font-bold mb-2" style={{ color : theme.text }}>{text}</Text>
+
+            <Pressable 
+                onPressIn={startVoiceRecognition}
+                onPressOut={stopVoiceRecognition}
+                className="bg-blue-600 px-4 py-2 rounded mt-2 mb-2"
+            >
+                <Text className="text-white font-semibold">
+                    {isListening ? 'Release to Stop' : 'Hold to Record'}
+                </Text>
+            </Pressable>
+
+            <Button title="Show Transcript" onPress={showTranscript} />
 
             <Pressable onPress={handleSubmit} className="bg-red-600 px-4 py-2 rounded mt-2">
                 <Text className="text-white font-semibold">Submit Report</Text>
