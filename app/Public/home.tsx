@@ -67,6 +67,11 @@ export default function Home() {
         setVoiceRecognitionModalVisible(true);
     }
 
+    // Feedback Modal
+    const [submissionFeedbackModalVisible, setSubmissionFeedbackModalVisible] = useState(false);
+    const [submissionFeedbackMessage, setSubmissionFeedbackMessage] = useState("");
+
+
 
     // Report Functions
     const [user, setUser] = useState(null);
@@ -225,10 +230,13 @@ export default function Home() {
             sendReportId(reportId);
             console.log("Report submitted with ID:", reportId);
             setVoiceRecognitionModalVisible(false);
-
+            setSubmissionFeedbackMessage("Reported Successfully");
+            setSubmissionFeedbackModalVisible(true);
         } catch (error) {
             console.error("Error submitting report:", error);
             setVoiceRecognitionModalVisible(false);
+            setSubmissionFeedbackMessage("Reported Error \\nPlease Try again\"");
+            setSubmissionFeedbackModalVisible(true);
         }
     };
 
@@ -554,7 +562,57 @@ export default function Home() {
                 </Pressable>
             </Modal>
 
+            {/*Submission Feedback Modal*/}
+            <Modal
+            visible={submissionFeedbackModalVisible}
+            transparent={true}
+            animationType="fade">
+                <Pressable
+                    onPress={() => setSubmissionFeedbackModalVisible(false)}
+                    style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                >
+                    <Pressable
+                        onPress={(e) => e.stopPropagation()}
+                        style={{
+                            width: 300,
+                            padding: 20,
+                            backgroundColor: 'white',
+                            borderRadius: 20,
+                            alignItems: 'center',
+                            elevation: 5,
+                        }}
+                    >
+                        <Text
+                            className="text-3xl"
+                            style={{
+                                fontWeight: 'bold',
+                                marginBottom: 10,
+                                textAlign: 'center',
+                            }}
+                        >
+                            {submissionFeedbackMessage}
+                        </Text>
 
+                        <Pressable
+                            onPress={() => setSubmissionFeedbackModalVisible(false)}
+                            style={{
+                                marginTop: 12,
+                                minWidth: "60%",
+                                padding: 10,
+                                backgroundColor: '#1E1E1E',
+                                borderRadius: 10,
+                            }}
+                        >
+                            <Text className="text-xl" style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+                        </Pressable>
+                    </Pressable>
+                </Pressable>
+            </Modal>
 
             {selectedLocation && (
                 <Text className="text-white text-2xl">
