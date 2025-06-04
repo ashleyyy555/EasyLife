@@ -554,6 +554,8 @@ export default function Home() {
                 </Pressable>
             </Modal>
 
+
+
             {selectedLocation && (
                 <Text className="text-white text-2xl">
                     {selectedLocation.latitude}, {selectedLocation.longitude}

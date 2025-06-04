@@ -1,12 +1,14 @@
 import { SafeAreaView , ScrollView ,View, Text, TextInput, Pressable, Image, TouchableOpacity , Modal} from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig"; // use your config here
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
+import { router } from "expo-router";
+
 
 export default function ProfilePage() {
     const { theme } = useTheme();
@@ -65,6 +67,16 @@ export default function ProfilePage() {
             }
         })();
     }, []);
+
+    // Handle Sign Out
+    const handleSignout = async () => {
+        try {
+            await signOut(auth);
+            router.replace("/login");
+        } catch (error) {
+            console.log(error);
+        }
+    }
 
     // Image Picker Functions
     const pickFromGallery = async () => {
@@ -362,7 +374,7 @@ export default function ProfilePage() {
                 </View>
 
                 <View className="items-center mt-4">
-                    <TouchableOpacity className="bg-[#CE0303B8] p-4 rounded-lg items-center mt-2 mb-10" style={{ width: "40%" }}>
+                    <TouchableOpacity className="bg-[#CE0303B8] p-4 rounded-lg items-center mt-2 mb-10" onPress={handleSignout} style={{ width: "40%" }}>
                         <Text className="text-white font-bold">Log Out</Text>
                     </TouchableOpacity>
                 </View>
