@@ -1,4 +1,4 @@
-import {Pressable, Text, TextInput, View} from "react-native";
+import {Pressable, Text, TextInput, View, Alert} from "react-native";
 import {useTheme} from "@/context/ThemeContext";
 import {useEffect, useState} from "react";
 import {onAuthStateChanged} from "firebase/auth";
@@ -25,6 +25,29 @@ export default function EnterUserDetails() {
     const [phone, setPhone] = useState("");
     const [gender, setGender] = useState("");
     const [birthday, setBirthday] = useState<Date | null>(null);
+
+    const showErrorAlert = () => {
+        Alert.alert(
+            "Error Saving Information",
+            "Please try submitting again",
+            [
+                { text: "OK" }
+            ],
+            { cancelable: true }
+        );
+    };
+
+    const pleaseFillAllAlert = () => {
+        Alert.alert(
+            "Please fill in all the fields",
+            "",
+            [
+                { text: "OK" }
+            ],
+            { cancelable: true }
+        );
+    };
+
 
     const handleGenderChange = (value: string) => {
         setGender(value); // Update gender selection
@@ -75,6 +98,7 @@ export default function EnterUserDetails() {
             gender.trim() === ''
         ) {
             console.log('Please fill in all fields.');
+            pleaseFillAllAlert();
             return;
         }
 
@@ -97,6 +121,7 @@ export default function EnterUserDetails() {
             router.push("/ChooseProfilePicture");
         } catch (error) {
             console.error('Error uploading data:', error);
+            showErrorAlert();
         }
     };
 

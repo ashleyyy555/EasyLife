@@ -1,4 +1,4 @@
-import {Pressable, Text, TextInput, View} from "react-native";
+import {Pressable, Text, TextInput, View, Alert} from "react-native";
 import {useTheme} from "@/context/ThemeContext";
 import {useEffect, useState} from "react";
 import {onAuthStateChanged} from "firebase/auth";
@@ -23,6 +23,16 @@ export default function EnterMedicalInformation() {
     const [medicalCondition, setMedicalCondition] = useState("");
     const [dnrStatus, setDnrStatus] = useState("");
 
+    const pleaseFillAllAlert = () => {
+        Alert.alert(
+            "Please fill in all mandatory fields",
+            "Blood Type, Emergency Contact and DNR Status",
+            [
+                { text: "OK" }
+            ],
+            { cancelable: true }
+        );
+    };
 
     const handleDnrStatus = (value: string) => {
         setDnrStatus(value); // Update gender selection
@@ -49,12 +59,10 @@ export default function EnterMedicalInformation() {
             bloodType.trim() === '' ||
             emergencyContactName.trim() === '' ||
             emergencyContact.trim() === '' ||
-            allergies.trim() === '' ||
-            medication.trim() === '' ||
-            medicalCondition.trim() === '' ||
             dnrStatus.trim() === ''
         ) {
             console.log('Please fill in all fields.');
+            pleaseFillAllAlert();
             return;
         }
 
