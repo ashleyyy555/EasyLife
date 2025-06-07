@@ -1,6 +1,7 @@
 import { View, Text, Pressable, Button, Platform, PermissionsAndroid, Alert } from "react-native";
 
 import { useTheme } from "../../context/ThemeContext";
+import { classify } from '../utils/svmClassifier';
 import { useEffect, useState, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc, runTransaction } from "firebase/firestore";
@@ -12,6 +13,12 @@ import * as FileSystem from 'expo-file-system';
 import { Audio } from 'expo-av';
 
 import { DeviceEventEmitter } from 'react-native';
+
+//NEW: Firebase imports
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../../FirebaseConfig';
+
+
 
 // type VoskRecognizer = {
 //     startListening: () => Promise<void>;
@@ -38,6 +45,39 @@ export default function emergencyReport() {
     const [prediction, setPrediction] = useState('');
     const [transcription, setTranscription] = useState('');
     const [region, setRegion] = useState<Region | null>(null);
+
+    
+    // Handle Vosk result and run SVM prediction
+    useEffect(() => {
+        const listener = async (event: any) => {
+            const text = event?.text || event?.partial;
+            if (text) {
+                setTranscript(text);                         // Updates UI
+                const predicted = await classify(text);      // SVM predicts label
+                setPrediction(predicted);                    // Save prediction
+                logEmergency(predicted, text);               // Optional log to Firebase
+            }
+        };
+        DeviceEventEmitter.addListener('onResult', listener);
+        return () => {
+            DeviceEventEmitter.removeListener('onResult', listener);
+        };
+    }, []);
+
+    // Log to Firebase 'emergency_logs' (optional)
+    const logEmergency = async (type: string, transcript: string) => {
+        try {
+            await addDoc(collection(db, 'emergency_logs'), {
+                type,
+                transcript,
+                createdAt: Timestamp.now(),
+            });
+            console.log('Emergency log saved to Firebase');
+        } catch (error) {
+            console.error('Failed to log emergency:', error);
+        }
+    };
+    
     
     // // Initialize Vosk model
     // useEffect(() => {
