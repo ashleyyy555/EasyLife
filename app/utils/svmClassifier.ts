@@ -22,7 +22,13 @@ export async function loadModel() {
 function transform(text: string): number[] {
   const vocab = tfidfConfig.vocabulary;
   const idf = tfidfConfig.idf;
-  const tokens = text.toLowerCase().split(/\s+/);
+  
+  //Safety check: Ensure vocab and IDF arrays match
+  if (vocab.length !== idf.length) {
+    throw new Error("TF-IDF config mismatch: vocab and idf length differ.");
+  }
+  
+  const tokens = text.toLowerCase().match(/\b\w+\b/g) || [];
   const vector = Array(vocab.length).fill(0);
   tokens.forEach(token => {
     const index = vocab.indexOf(token);
@@ -37,7 +43,8 @@ export async function classify(text: string): Promise<string> {
   const inputVector = Float32Array.from(transform(text));
   const tensor = new ort.Tensor('float32', inputVector, [1, inputVector.length]);
   const results = await session.run({ input: tensor });
-  const predictedIndex = results.output.data[0];
+  const outputName = session.outputNames[0];             // Automatically detect output
+  const predictedIndex = results[outputName].data[0];
   return labelMap[predictedIndex];
 }
 
