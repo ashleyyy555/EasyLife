@@ -1,6 +1,6 @@
-import { Image, Text, View, SafeAreaView, Pressable, Modal, TextInput, PermissionsAndroid, NativeModules, Platform, DeviceEventEmitter } from "react-native";
+import { Image, Text, View, SafeAreaView, Pressable, Modal, TextInput, PermissionsAndroid, NativeModules, Platform, DeviceEventEmitter, Alert, NativeEventEmitter } from "react-native";
 import { useColorScheme } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {router} from "expo-router";
 import "../global.css";
 import {useTheme} from "@/context/ThemeContext";
@@ -13,8 +13,10 @@ import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import {Region} from "react-native-maps";
-import * as Location from "expo-location"; // use your config here
+import * as Location from "expo-location"; 
+import { Audio } from 'expo-av';
 
+const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
 
 export default function Home() {
     const { theme } = useTheme();
@@ -81,46 +83,194 @@ export default function Home() {
 
     //Request mic permission for listening
     const requestMicPermission = async () => {
+        console.log('Requesting microphone permission...');
         if (Platform.OS === 'android') {
+            console.log('Android platform detected, requesting Android permissions');
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
             );
+            console.log('Android permission result:', granted);
             if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-                console.warn('Microphone permission denied');
+                throw new Error('Microphone permission denied');
+            }
+        } else if (Platform.OS === 'ios') {
+            console.log('iOS platform detected, requesting iOS permissions');
+            const { status } = await Audio.requestPermissionsAsync();
+            console.log('iOS permission status:', status);
+            if (status !== 'granted') {
+                throw new Error('Microphone permission denied');
+            }
+        }
+        console.log('Microphone permission granted');
+        return true;
+    };
+
+    const [prediction, setPrediction] = useState('');
+    const [transcription, setTranscription] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const [isModelLoaded, setIsModelLoaded] = useState(false);
+
+    // Set up Vosk event listeners
+    useEffect(() => {
+        // const resultSubscription = eventEmitter.addListener('onResult', (result: any) => {
+        //     try {
+        //         setTranscription(result);
+        //         console.log('Transcription:', result);
+        //     } catch (error) {
+        //         console.error('Error parsing Vosk result:', error);
+        //     }
+        // });
+
+        const errorSubscription = eventEmitter.addListener('onError', (error: any) => {
+            console.error('Vosk error:', error);
+        });
+
+        const partialResultSubscription = eventEmitter.addListener('onPartialResult', (result: string) => {
+            console.log('Vosk partial result:', result);
+
+            setTranscription(result);
+            console.log('Transcription:', result);
+        });
+
+        const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
+            console.log('Vosk final result:', result);
+            setTranscription(result);
+            console.log('Transcription:', result);
+        });
+
+        const timeoutSubscription = eventEmitter.addListener('onTimeout', () => {
+            console.log('Vosk timeout');
+        });
+
+        return () => {
+            // resultSubscription.remove();
+            errorSubscription.remove();
+            partialResultSubscription.remove();
+            finalResultSubscription.remove();
+            timeoutSubscription.remove();
+            if (isModelLoaded) {
+                NativeModules.Vosk.unload();
+                setIsModelLoaded(false);
+            }
+        };
+    }, []);
+
+    const startVoiceRecognition = async() => {
+        console.log('Starting voice recognition process...');
+        try {
+            // Request microphone permission first
+            await requestMicPermission();
+            console.log('Permission check passed');
+
+            // Configure audio for recording BEFORE any model operations
+            console.log('Configuring audio...');
+            try {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                    staysActiveInBackground: true,
+                    interruptionModeIOS: 1, // DoNotMix
+                    interruptionModeAndroid: 1, // DoNotMix
+                    shouldDuckAndroid: true,
+                });
+                console.log('Audio configured successfully');
+            } catch (audioError) {
+                console.error('Error configuring audio:', audioError);
+                throw new Error('Failed to configure audio session');
+            }
+
+            // previous instance is cleaned up
+            if (isModelLoaded) {
+                console.log('Cleaning up previous model instance...');
+                try {
+                    await NativeModules.Vosk.stop();
+                    console.log('Previous instance stopped');
+                    await NativeModules.Vosk.unload();
+                    console.log('Previous model unloaded');
+                    setIsModelLoaded(false);
+                    // Add delay after cleanup
+                    console.log('Waiting after cleanup...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (cleanupError) {
+                    console.error('Error during cleanup:', cleanupError);
+                }
+            }
+
+            // Only load model if not already loaded
+            if (!isModelLoaded) {
+                console.log('Loading Vosk model...');
+                try {
+                    await NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
+                    setIsModelLoaded(true);
+                    console.log('Vosk model loaded successfully');
+                    // Add delay after loading
+                    console.log('Waiting after model load...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (loadError) {
+                    console.error('Error loading model:', loadError);
+                    throw new Error('Failed to load voice recognition model');
+                }
+            }
+            
+            // Start with default options
+            console.log('Starting voice recognition...');
+            try {
+                const startResult = await NativeModules.Vosk.start({
+                    timeout: 100000000,
+                });
+
+                console.log('startResult', startResult);
+                
+                if (!startResult) {
+                    throw new Error('Failed to start voice recognition');
+                }
+                
+                setIsListening(true);
+                console.log('Voice recognition started successfully');
+            } catch (startError) {
+                console.error('Error starting recognition:', startError);
+                // Cleanup on start error
+                if (isModelLoaded) {
+                    await NativeModules.Vosk.unload();
+                    setIsModelLoaded(false);
+                }
+                throw new Error('Failed to start voice recognition');
+            }
+        } catch (error: any) {
+            console.error('Error in voice recognition:', error);
+            Alert.alert('Error', 'Failed to start voice recognition: ' + error.message);
+            // Final cleanup on any error
+            try {
+                if (isModelLoaded) {
+                    await NativeModules.Vosk.unload();
+                    setIsModelLoaded(false);
+                }
+                // Reset audio session
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: false,
+                    playsInSilentModeIOS: false,
+                });
+            } catch (cleanupError) {
+                console.error('Error during final cleanup:', cleanupError);
             }
         }
     };
 
-    //Call speech-to-text, (not yet) connect to button
-    const { VoskModule } = NativeModules;
-    const startVoiceRecognition = () => {
-        if (VoskModule && VoskModule.startListening) {
-            VoskModule.startListening();
-        } else {
-            console.warn('VoskModule is not available');
+    const stopVoiceRecognition = async () => {
+        try {
+            if (isListening) {
+                const result = await NativeModules.Vosk.stop();
+                console.log('result', result);
+                setIsListening(false);
+                console.log('Voice recognition stopped');
+                // Add delay after stopping
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+            }
+        } catch (error: any) {
+            console.error('Error stopping voice recognition:', error);
+            Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
         }
-    };
-
-    // where we receives the label and transcription text from android
-    const [prediction, setPrediction] = useState('');
-    const [transcription, setTranscription] = useState('');
-    useEffect(() => {
-        const subscription = DeviceEventEmitter.addListener('onPrediction', (data: { label: string, transcription: string }) => {
-            console.log('Predicted category of the case:', data.label);
-            console.log('Transcription:', data.transcription);
-            setPrediction(data.label);
-            setTranscription(data.transcription);
-        });
-
-        return () => subscription.remove();
-    }, []);
-
-
-//  This is a Stop-listening function, (yet) connect to button
-    const stopVoiceRecognition = () => {
-      if (VoskModule?.stopListening) {
-        VoskModule.stopListening();
-      }
     };
 
     useEffect(() => {
@@ -394,7 +544,7 @@ export default function Home() {
                     >
                         <Pressable
                             onPressIn={() => {
-                                console.log("Hodling Down");
+                                console.log("Holding Down");
                                 startVoiceRecognition();
                             }}
                             onPressOut={() => {
@@ -420,6 +570,7 @@ export default function Home() {
                         <Text className="text-xl" style={{ color: theme.opposite, textAlign: 'center' }}>
                             Hold the icon and speak
                         </Text>
+                        
 
                         <Pressable
                             onPress={handleSubmit}
