@@ -138,7 +138,7 @@ export default function Home() {
             setTranscription(result);
             console.log('Transcription:', result);
             try {
-                const predictionResult = await classify(result);    
+                const predictionResult = await classify(result);    //takes in finalResult and make classification
                 console.log('SVM Prediction:', predictionResult);
                 setPrediction(predictionResult);
             } catch (error) {
