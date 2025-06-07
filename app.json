@@ -14,14 +14,18 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.easylifeproto"
+      "bundleIdentifier": "com.anonymous.easylifeproto",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "We need access to your microphone for voice recognition"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.easylifeproto"
+      "package": "com.anonymous.easylifeproto",
+      "permissions": ["RECORD_AUDIO"]
     },
     "plugins": [
       "expo-router",
@@ -34,7 +38,9 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-dev-client",
+      "expo-av"
     ],
     "experiments": {
       "typedRoutes": true

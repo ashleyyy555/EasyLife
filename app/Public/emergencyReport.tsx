@@ -1,91 +1,190 @@
-
-import { View, Text, Pressable, Button, Platform, PermissionsAndroid, NativeModules, Alert } from "react-native";
+import { View, Text, Pressable, Button, Platform, PermissionsAndroid, Alert } from "react-native";
 
 import { useTheme } from "../../context/ThemeContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import {Region} from "react-native-maps";
-import * as Location from "expo-location"; // use your config here
+import * as Location from "expo-location"; 
+import Vosk from 'react-native-vosk';
+import * as FileSystem from 'expo-file-system';
+import { Audio } from 'expo-av';
 
 import { DeviceEventEmitter } from 'react-native';
 
+// type VoskRecognizer = {
+//     startListening: () => Promise<void>;
+//     stopListening: () => Promise<void>;
+// };
+
+// declare module 'react-native-vosk' {
+//     interface VoskStatic {
+//         initModel: (modelPath: string) => Promise<void>;
+//         createRecognizer: () => Promise<VoskRecognizer>;
+//         destroyRecognizer: (recognizer: VoskRecognizer) => Promise<void>;
+//         addListener: (event: string, callback: (result: string) => void) => void;
+//     }
+// }
 
 export default function emergencyReport() {
     const { theme } = useTheme();
-    const { VoskModule } = NativeModules;
     const [user, setUser] = useState(null);
     const [userId, setUserId] = useState("");
     const [text, setText] = useState('');
     const [isListening, setIsListening] = useState(false);
-
-    //Request mic permission for listening
-    const requestMicPermission = async () => {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.warn('Microphone permission denied');
-          return false;
-        }
-        return true;
-      }
-      return true;
-    };
-
-    const startVoiceRecognition = async () => {
-      const hasPermission = await requestMicPermission();
-      if (!hasPermission) return;
-
-      if (VoskModule && VoskModule.startListening) {
-        try {
-          VoskModule.startListening();
-          setIsListening(true);
-          console.log('Started listening');
-        } catch (error) {
-          console.error('Error starting voice recognition:', error);
-        }
-      } else {
-        console.warn('VoskModule is not available');
-      }
-    };
-    
-    // where we receives the label and transcription text from android
+    // const [recognizer, setRecognizer] = useState<VoskRecognizer | null>(null);
+    const [transcript, setTranscript] = useState('');
     const [prediction, setPrediction] = useState('');
     const [transcription, setTranscription] = useState('');
-    useEffect(() => {
-        const subscription = DeviceEventEmitter.addListener('onPrediction', (data: { label: string, transcription: string }) => {
-            console.log('Predicted category of the case:', data.label);
-            console.log('Transcription:', data.transcription);
-            setPrediction(data.label);
-            setTranscription(data.transcription);
-        });
-
-        return () => subscription.remove();
-    }, []);
+    const [region, setRegion] = useState<Region | null>(null);
     
+    // // Initialize Vosk model
+    // useEffect(() => {
+    //     const initVosk = async () => {
+    //         try {
+    //             const modelPath = Platform.select({
+    //                 ios: 'vosk-model-small-en-us-0.15',
+    //                 android: 'vosk-model-small-en-us-0.15',
+    //                 default: 'vosk-model-small-en-us-0.15'
+    //             });
+                
+    //             console.log('Initializing Vosk with model path:', modelPath);
+    //             await Vosk.initModel(modelPath);
+    //             console.log('Model initialized, creating recognizer...');
+    //             const newRecognizer = await Vosk.createRecognizer();
+    //             console.log('Recognizer created successfully');
+    //             setRecognizer(newRecognizer);
+    //             console.log('Vosk model initialized successfully');
+    //         } catch (error: any) {
+    //             console.error('Error initializing Vosk:', error);
+    //             Alert.alert('Error', 'Failed to initialize voice recognition: ' + error.message);
+    //         }
+    //     };
 
-    const stopVoiceRecognition = () => {
-      if (VoskModule?.stopListening) {
+    //     initVosk();
+    //     return () => {
+    //         if (recognizer) {
+    //             Vosk.destroyRecognizer(recognizer);
+    //         }
+    //     };
+    // }, []);
+
+    // // Request microphone permission
+    // const requestMicPermission = async () => {
+    //     if (Platform.OS === 'android') {
+    //         const granted = await PermissionsAndroid.request(
+    //             PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+    //         );
+    //         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+    //             Alert.alert('Permission Denied', 'Microphone permission is required for voice recognition');
+    //             return false;
+    //         }
+    //         return true;
+    //     } else if (Platform.OS === 'ios') {
+    //         const { status } = await Audio.requestPermissionsAsync();
+    //         if (status !== 'granted') {
+    //             Alert.alert('Permission Denied', 'Microphone permission is required for voice recognition');
+    //             return false;
+    //         }
+    //         return true;
+    //     }
+    //     return true;
+    // };
+
+    // const startVoiceRecognition = async () => {
+    //     const hasPermission = await requestMicPermission();
+    //     if (!hasPermission || !recognizer) return;
+
+    //     try {
+    //         await recognizer?.startListening();
+    //         setIsListening(true);
+    //         console.log('Started listening');
+
+    //         // Set up audio recording
+    //         const { status } = await Audio.requestPermissionsAsync();
+    //         if (status !== 'granted') {
+    //             throw new Error('Audio permission not granted');
+    //         }
+
+    //         await Audio.setAudioModeAsync({
+    //             allowsRecordingIOS: true,
+    //             playsInSilentModeIOS: true,
+    //         });
+
+    //         const recording = new Audio.Recording();
+    //         await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+    //         await recording.startAsync();
+
+    //         // Handle recognition results
+    //         Vosk.addListener('onResult', (result) => {
+    //             const text = JSON.parse(result).text;
+    //             if (text) {
+    //                 setTranscript(text);
+    //                 saveTranscript(text);
+    //             }
+    //         });
+
+    //     } catch (error) {
+    //         console.error('Error starting voice recognition:', error);
+    //         Alert.alert('Error', 'Failed to start voice recognition');
+    //     }
+    // };
+
+    // const stopVoiceRecognition = async () => {
+    //     if (!recognizer) return;
+
+    //     try {
+    //         await recognizer?.stopListening();
+    //         setIsListening(false);
+    //         console.log('Stopped listening');
+    //     } catch (error) {
+    //         console.error('Error stopping voice recognition:', error);
+    //         Alert.alert('Error', 'Failed to stop voice recognition');
+    //     }
+    // };
+
+    const saveTranscript = async (text: string) => {
         try {
-          VoskModule.stopListening();
-          setIsListening(false);
-          console.log('Stopped listening');
+            const fileName = 'transcript.txt';
+            const filePath = `${FileSystem.documentDirectory}${fileName}`;
+            
+            // Read existing content if file exists
+            let existingContent = '';
+            try {
+                const fileInfo = await FileSystem.getInfoAsync(filePath);
+                if (fileInfo.exists) {
+                    existingContent = await FileSystem.readAsStringAsync(filePath);
+                }
+            } catch (error) {
+                console.log('No existing transcript file');
+            }
+
+            // Append new content
+            const newContent = existingContent ? `${existingContent}\n${text}` : text;
+            await FileSystem.writeAsStringAsync(filePath, newContent);
+            console.log('Transcript saved successfully');
         } catch (error) {
-          console.error('Error stopping voice recognition:', error);
+            console.error('Error saving transcript:', error);
         }
-      }
     };
 
     const showTranscript = async () => {
-      try {
-        const content = await VoskModule.getTranscript();
-        Alert.alert("Transcript", content);
-      } catch (err) {
-        console.warn("Failed to read transcript:", err);
-      }
+        try {
+            const fileName = 'transcript.txt';
+            const filePath = `${FileSystem.documentDirectory}${fileName}`;
+            
+            const fileInfo = await FileSystem.getInfoAsync(filePath);
+            if (fileInfo.exists) {
+                const content = await FileSystem.readAsStringAsync(filePath);
+                Alert.alert("Transcript", content);
+            } else {
+                Alert.alert("Transcript", "No transcript available");
+            }
+        } catch (error) {
+            console.error('Error reading transcript:', error);
+            Alert.alert("Error", "Failed to read transcript");
+        }
     };
 
     useEffect(() => {
@@ -129,8 +228,6 @@ export default function emergencyReport() {
     }, []);
 
     // Code to get Geolocation
-
-    const [region, setRegion] = useState<Region | null>(null);
 
     useEffect(() => {
         const getCurrentLocation = async () => {
@@ -202,9 +299,9 @@ export default function emergencyReport() {
             <Text className="text-xl font-bold mb-2" style={{ color : theme.text }}>{text}</Text>
 
             <Pressable 
-                onPressIn={startVoiceRecognition}
-                onPressOut={stopVoiceRecognition}
-                className="bg-blue-600 px-4 py-2 rounded mt-2 mb-2"
+                // onPressIn={startVoiceRecognition}
+                // onPressOut={stopVoiceRecognition}
+                // className="bg-blue-600 px-4 py-2 rounded mt-2 mb-2"
             >
                 <Text className="text-white font-semibold">
                     {isListening ? 'Release to Stop' : 'Hold to Record'}
