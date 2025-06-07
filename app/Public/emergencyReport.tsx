@@ -53,30 +53,31 @@ export default function emergencyReport() {
             const text = event?.text || event?.partial;
             if (text) {
                 setTranscript(text);                         // Updates UI
+                setTranscription(text);
                 const predicted = await classify(text);      // SVM predicts label
                 setPrediction(predicted);                    // Save prediction
                 logEmergency(predicted, text);               // Optional log to Firebase
             }
         };
-        DeviceEventEmitter.addListener('onResult', listener);
-        return () => {
-            DeviceEventEmitter.removeListener('onResult', listener);
-        };
+        
+        const subscription = DeviceEventEmitter.addListener('onResult', listener);
+        return () => subscription.remove();
+        
     }, []);
 
     // Log to Firebase 'emergency_logs' (optional)
-    const logEmergency = async (type: string, transcript: string) => {
-        try {
-            await addDoc(collection(db, 'emergency_logs'), {
-                type,
-                transcript,
-                createdAt: Timestamp.now(),
-            });
-            console.log('Emergency log saved to Firebase');
-        } catch (error) {
-            console.error('Failed to log emergency:', error);
-        }
-    };
+   // const logEmergency = async (type: string, transcript: string) => {
+   //     try {
+   //         await addDoc(collection(db, 'emergency_logs'), {
+   //             type,
+   //             transcript,
+   //             createdAt: Timestamp.now(),
+   //         });
+   //         console.log('Emergency log saved to Firebase');
+   //     } catch (error) {
+   //         console.error('Failed to log emergency:', error);
+   //     }
+   // };
     
     
     // // Initialize Vosk model
