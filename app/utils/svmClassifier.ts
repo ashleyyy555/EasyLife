@@ -18,6 +18,8 @@ export async function loadModel() {
   return session;
 }
 
+let vocabIndexMap: { [token: string]: number } | null = null;
+
 // -- Converts input text into a TF-IDF vector --
 function transform(text: string): number[] {
   const vocab = tfidfConfig.vocabulary;
@@ -26,6 +28,14 @@ function transform(text: string): number[] {
   //Safety check: Ensure vocab and IDF arrays match
   if (vocab.length !== idf.length) {
     throw new Error("TF-IDF config mismatch: vocab and idf length differ.");
+  }
+
+  // Cache the vocab-to-index map
+  if (!vocabIndexMap) {
+    vocabIndexMap = {};
+    vocab.forEach((word, i) => {
+      vocabIndexMap![word] = i;
+    });
   }
   
   const tokens = text.toLowerCase().match(/\b\w+\b/g) || [];
