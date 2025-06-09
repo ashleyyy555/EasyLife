@@ -1,6 +1,6 @@
 import * as ort from 'onnxruntime-react-native';
-import tfidfConfig from '../../assets/ml/tfidf_config.json';
-import labelMap from '../../assets/ml/label_classes.json';
+import tfidfConfig from '@/app/assets/ml/tfidf_config.json';
+import labelMap from '@/app/assets/ml/label_classes.json';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -10,7 +10,7 @@ let session: ort.InferenceSession | null = null;
 // -- Loads the ONNX model from assets and prepares it --
 export async function loadModel() {
   if (session) return session;
-  const modelAsset = Asset.fromModule(require('../../assets/ml/svm_model_1.0.onnx'));
+  const modelAsset = Asset.fromModule(require('@/app/assets/ml/svm_model_1.0.onnx'));
   await modelAsset.downloadAsync();
   const modelPath = `${FileSystem.cacheDirectory}svm_model_1.0.onnx`;
   await FileSystem.copyAsync({ from: modelAsset.localUri!, to: modelPath });

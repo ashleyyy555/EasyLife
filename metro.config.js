@@ -1,16 +1,12 @@
 const { getDefaultConfig } = require("expo/metro-config");
-const { withNativeWind } = require('nativewind/metro');
+const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-defaultConfig.resolver.assetExts.push('onnx');
-
-module.exports = defaultConfig;
-
-config.resolver.sourceExts.push('cjs');
-
-// This is the new line you should add in, after the previous lines
+// Fix asset extension and source extension usage
+config.resolver.assetExts.push("onnx");
+config.resolver.sourceExts.push("cjs");
 config.resolver.unstable_enablePackageExports = false;
 
-module.exports = withNativeWind(config, { input: './app/global.css' });
-
+// Wrap with NativeWind and export
+module.exports = withNativeWind(config, { input: "./app/global.css" });

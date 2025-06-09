@@ -15,7 +15,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import {Region} from "react-native-maps";
 import * as Location from "expo-location"; 
 import { Audio } from 'expo-av';
-import { classify } from '@/ml/svmClassifier';
+import { classify } from '@/app/utils/svmClassifier';
 
 const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
 
@@ -133,7 +133,7 @@ export default function Home() {
             console.log('Transcription:', result);
         });
 
-        const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
+        const finalResultSubscription = eventEmitter.addListener('onFinalResult', async (result: string) => {
             console.log('Vosk final result:', result);
             setTranscription(result);
             console.log('Transcription:', result);

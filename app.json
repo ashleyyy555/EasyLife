@@ -25,7 +25,11 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.easylifeproto",
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -44,6 +48,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ed9013e6-02a6-4d55-ad0a-1355e7e3ad02"
+      }
+    },
+    "owner": "darrelltwh"
   }
 }
