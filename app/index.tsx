@@ -22,18 +22,33 @@ export default function Index() {
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // ✅ Check if init is TRUE before navigating
-                const initDocRef = doc(db, "users", user.uid);
-                const initDocSnap = await getDoc(initDocRef);
+                const userDocRef = doc(db, "users", user.uid);
+                const operatorDocRef = doc(db, "operators", user.uid);
 
-                if (initDocSnap.exists() && initDocSnap.data()?.init === true) {
-                    router.replace("/Public/home");
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    // User found in 'users' collection
+                    if (userDocSnap.data()?.init === true) {
+                        router.replace("/Public/home"); // route for normal users
+                    } else {
+                        router.replace("/EnterUserDetails");
+                    }
                 } else {
-                    router.replace("/EnterUserDetails");
+                    // If not found in users, check operators
+                    const operatorDocSnap = await getDoc(operatorDocRef);
+                    if (operatorDocSnap.exists()) {
+                        if (operatorDocSnap.data()?.init === true) {
+                            router.replace("/Operators/home"); // route for operators
+                        } else {
+                            router.replace("/EnterOperatorDetails"); // operator-specific route if needed
+                        }
+                    } else {
+                        // Not found in either collection — maybe log out or redirect to register
+                        router.replace("/register");
+                    }
                 }
-
             } else {
-                // If the user is not authenticated, navigate to the register page
                 router.replace("/register");
             }
         });
