@@ -41,14 +41,12 @@ export default function ReportHistory() {
             const reportsRef = collection(db, "reports");
             const q = query(reportsRef, where("userId", "==", uid));
             const querySnapshot = await getDocs(q);
-            console.log("Fetched reports:", querySnapshot.size); // ✅
 
 
             const ongoing: any[] = [];
             const past: any[] = [];
 
             querySnapshot.forEach((doc) => {
-                console.log("Report document:", doc.data()); // ✅
                const report = { id: doc.id, ...doc.data()};
                if (report.status === "Active") {
                    ongoing.push(report);
@@ -96,7 +94,7 @@ export default function ReportHistory() {
                                         </Text>
                                         <View style={{ backgroundColor: '#1E1E1E' }}>
                                             {ongoingReports.map((report) => (
-                                                <Pressable key={report.id} className="p-4 rounded-lg" onPress={() => router.push(`/report/${report.id}`)}>
+                                                <Pressable key={report.id} className="p-4 rounded-lg" onPress={() => router.push(`/Public/Reports/${report.id}`)}>
                                                     <View className="flex-row items-center gap-4">
                                                         <AlertIcon className="mr-4" size={40} />
                                                         <View className="flex gap-1">
@@ -127,7 +125,7 @@ export default function ReportHistory() {
                                         </Text>
                                         <View style={{ backgroundColor: '#1E1E1E' }}>
                                             {pastReports.map((report) => (
-                                                <Pressable key={report.id} className="p-4 rounded-lg" onPress={() => router.push(`/report/${report.id}`)}>
+                                                <Pressable key={report.id} className="p-4 rounded-lg" onPress={() => router.push(`/Public/Reports/${report.id}`)}>
                                                     <View className="flex-row items-center gap-4">
                                                         <CheckmarkIcon className="mr-4" size={40} />
                                                         <View className="flex gap-1">

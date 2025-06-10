@@ -187,7 +187,23 @@ export default function Layout() {
                 }}
             />
 
+            <Tabs.Screen
+                // Name of the route to hide.
+                name="Reports/[id]"
+                options={{
+                    // This tab will no longer show up in the tab bar.
+                    href: null,
+                }}
+            />
 
+            <Tabs.Screen
+                // Name of the route to hide.
+                name="DetailedReport"
+                options={{
+                    // This tab will no longer show up in the tab bar.
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }
