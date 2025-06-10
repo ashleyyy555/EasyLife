@@ -109,66 +109,93 @@ export default function Home() {
     const [transcription, setTranscription] = useState('');
     const [isListening, setIsListening] = useState(false);
     const [isModelLoaded, setIsModelLoaded] = useState(false);
+    const [isModelBusy, setIsModelBusy] = useState(false);
+    const [pendingAction, setPendingAction] = useState<"load" | "start" | null>(null);
+    const pendingActionRef = useRef<"load" | "start" | null>(null);
 
-    // Set up Vosk event listeners
     useEffect(() => {
-        // const resultSubscription = eventEmitter.addListener('onResult', (result: any) => {
-        //     try {
-        //         setTranscription(result);
-        //         console.log('Transcription:', result);
-        //     } catch (error) {
-        //         console.error('Error parsing Vosk result:', error);
-        //     }
-        // });
+        pendingActionRef.current = pendingAction;
+    }, [pendingAction]);
 
+    useEffect(() => {
+        const cleanupListener = eventEmitter.addListener('onCleanup', (msg) => {
+            console.log('Native cleanup complete:', msg);
+            setIsModelBusy(false);
+            // If we were waiting to load/start, continue the chain
+            if (pendingActionRef.current === "load") {
+                NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
+                setPendingAction("start");
+            }
+        });
+        const modelLoadedListener = eventEmitter.addListener('onModelLoaded', (msg) => {
+            console.log('Native model loaded:', msg);
+            setIsModelLoaded(true);
+            if (pendingActionRef.current === "start") {
+                NativeModules.Vosk.start({ timeout: 100000000 })
+                    .then((result: any) => {
+                        console.log('Vosk start result:', result);
+                        setIsListening(true);
+                        setIsModelBusy(false);
+                    })
+                    .catch((err: any) => {
+                        console.error('Error starting recognition:', err);
+                        setIsModelBusy(false);
+                        setIsListening(false);
+                        Alert.alert('Error', 'Failed to start voice recognition: ' + (err?.message || err));
+                    });
+                setPendingAction(null);
+            }
+        });
         const errorSubscription = eventEmitter.addListener('onError', (error: any) => {
             console.error('Vosk error:', error);
+            setIsModelBusy(false);
+            setIsListening(false);
         });
-
         const partialResultSubscription = eventEmitter.addListener('onPartialResult', (result: string) => {
             console.log('Vosk partial result:', result);
-
             setTranscription(result);
             console.log('Transcription:', result);
         });
-
         const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
             console.log('Vosk final result:', result);
             setTranscription(result);
             console.log('Transcription:', result);
         });
-
         const timeoutSubscription = eventEmitter.addListener('onTimeout', () => {
             console.log('Vosk timeout');
+            setIsModelBusy(false);
+            setIsListening(false);
         });
-
+        // Only remove listeners on unmount, not on every pendingAction change
         return () => {
-            // resultSubscription.remove();
             errorSubscription.remove();
             partialResultSubscription.remove();
             finalResultSubscription.remove();
             timeoutSubscription.remove();
+            cleanupListener.remove();
+            modelLoadedListener.remove();
             if (isModelLoaded) {
                 NativeModules.Vosk.unload();
                 setIsModelLoaded(false);
             }
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const startVoiceRecognition = async() => {
-        console.log('Starting voice recognition process...');
+    const startVoiceRecognition = async () => {
+        if (isModelBusy) {
+            console.log('Model is busy, please wait...');
+            return;
+        }
+        setIsModelBusy(true);
         try {
-            // Request microphone permission first
             await requestMicPermission();
             console.log('Permission check passed');
-
             // Configure audio for recording BEFORE any model operations
-            console.log('Configuring audio...');
             try {
                 await Audio.setAudioModeAsync({
                     allowsRecordingIOS: true,
                     playsInSilentModeIOS: true,
-                    staysActiveInBackground: true,
                     interruptionModeIOS: 1, // DoNotMix
                     interruptionModeAndroid: 1, // DoNotMix
                     shouldDuckAndroid: true,
@@ -176,76 +203,34 @@ export default function Home() {
                 console.log('Audio configured successfully');
             } catch (audioError) {
                 console.error('Error configuring audio:', audioError);
+                setIsModelBusy(false);
                 throw new Error('Failed to configure audio session');
             }
-
-            // previous instance is cleaned up
             if (isModelLoaded) {
                 console.log('Cleaning up previous model instance...');
                 try {
                     await NativeModules.Vosk.stop();
-                    console.log('Previous instance stopped');
                     await NativeModules.Vosk.unload();
-                    console.log('Previous model unloaded');
                     setIsModelLoaded(false);
-                    // Add delay after cleanup
-                    console.log('Waiting after cleanup...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    setPendingAction("load");
                 } catch (cleanupError) {
                     console.error('Error during cleanup:', cleanupError);
+                    setIsModelBusy(false);
                 }
-            }
-
-            // Only load model if not already loaded
-            if (!isModelLoaded) {
-                console.log('Loading Vosk model...');
-                try {
-                    await NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
-                    setIsModelLoaded(true);
-                    console.log('Vosk model loaded successfully');
-                    // Add delay after loading
-                    console.log('Waiting after model load...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                } catch (loadError) {
-                    console.error('Error loading model:', loadError);
-                    throw new Error('Failed to load voice recognition model');
-                }
-            }
-            
-            // Start with default options
-            console.log('Starting voice recognition...');
-            try {
-                const startResult = await NativeModules.Vosk.start({
-                    timeout: 100000000,
-                });
-
-                console.log('startResult', startResult);
-                
-                if (!startResult) {
-                    throw new Error('Failed to start voice recognition');
-                }
-                
-                setIsListening(true);
-                console.log('Voice recognition started successfully');
-            } catch (startError) {
-                console.error('Error starting recognition:', startError);
-                // Cleanup on start error
-                if (isModelLoaded) {
-                    await NativeModules.Vosk.unload();
-                    setIsModelLoaded(false);
-                }
-                throw new Error('Failed to start voice recognition');
+            } else {
+                NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
+                setPendingAction("start");
             }
         } catch (error: any) {
             console.error('Error in voice recognition:', error);
+            setIsModelBusy(false);
+            setIsListening(false);
             Alert.alert('Error', 'Failed to start voice recognition: ' + error.message);
-            // Final cleanup on any error
             try {
                 if (isModelLoaded) {
                     await NativeModules.Vosk.unload();
                     setIsModelLoaded(false);
                 }
-                // Reset audio session
                 await Audio.setAudioModeAsync({
                     allowsRecordingIOS: false,
                     playsInSilentModeIOS: false,
@@ -257,18 +242,23 @@ export default function Home() {
     };
 
     const stopVoiceRecognition = async () => {
+        if (isModelBusy) {
+            console.log('Model is busy, please wait...');
+            return;
+        }
+        setIsModelBusy(true);
         try {
             if (isListening) {
                 const result = await NativeModules.Vosk.stop();
                 console.log('result', result);
                 setIsListening(false);
+                setIsModelBusy(false);
                 console.log('Voice recognition stopped');
-                // Add delay after stopping
-                await new Promise(resolve => setTimeout(resolve, 500));
-
             }
         } catch (error: any) {
             console.error('Error stopping voice recognition:', error);
+            setIsModelBusy(false);
+            setIsListening(false);
             Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
         }
     };
