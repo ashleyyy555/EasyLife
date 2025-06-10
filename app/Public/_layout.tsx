@@ -78,7 +78,7 @@ export default function Layout() {
     const HeaderLeft = () => (
         <TouchableOpacity onPress={() => console.log("Settings Pressed")}>
             <Image
-                source={require("../../assets/images/EasyLife-logo.png")} // Update path if needed
+                source={require("@/assets/images/EasyLife-logo.png")} // Update path if needed
                 style={{
                     width: 190,
                     height: 190,
@@ -135,6 +135,7 @@ export default function Layout() {
                     elevation: 0, // ✅ removes shadow on Android
                 },
                 headerTransparent: false,
+                headerShown: true,
                 // headerRight: () => <HeaderRight />,
             }}
         >
@@ -169,9 +170,11 @@ export default function Layout() {
             />
 
             <Tabs.Screen
-                name="ReportHistory"
+                name="(reports_stack)"
                 options={{
                     title: "Reports",
+                    headerTransparent: false,
+                    headerShown: false,
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="map-outline" size={size} color={color} />
                     ),
@@ -184,15 +187,6 @@ export default function Layout() {
                     headerTransparent: false,
                     title: "Profile",
                     tabBarIcon: (props) => <ProfileTabIcon {...props} />,
-                }}
-            />
-
-            <Tabs.Screen
-                // Name of the route to hide.
-                name="Reports/[id]"
-                options={{
-                    // This tab will no longer show up in the tab bar.
-                    href: null,
                 }}
             />
 
