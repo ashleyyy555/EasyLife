@@ -147,8 +147,15 @@ export default function Home() {
             try {
                 console.log('Vosk final result:', result);
                 setTranscription(result);
+
+                // Ensure audio system is stable before classification
+                console.log('Waiting briefly before classification...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                console.log('Calling classify() with result:', result);
                 const predictionResult = await classify(result);
                 console.log('SVM Prediction:', predictionResult);
+                
                 setPrediction(predictionResult);
             } catch (error) {
                 console.error('Error classifying transcription:', error);
