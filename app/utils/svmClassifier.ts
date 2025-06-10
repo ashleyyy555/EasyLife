@@ -18,6 +18,8 @@ export async function loadModel() {
   return session;
 }
 
+let vocabIndexMap: { [token: string]: number } | null = null;
+
 // -- Converts input text into a TF-IDF vector --
 function transform(text: string): number[] {
   const vocab = tfidfConfig.vocabulary;
@@ -27,25 +29,43 @@ function transform(text: string): number[] {
   if (vocab.length !== idf.length) {
     throw new Error("TF-IDF config mismatch: vocab and idf length differ.");
   }
+
+  // Cache the vocab-to-index map
+  if (!vocabIndexMap) {
+    vocabIndexMap = {};
+    vocab.forEach((word, i) => {
+      vocabIndexMap![word] = i;
+    });
+  }
   
   const tokens = text.toLowerCase().match(/\b\w+\b/g) || [];
   const vector = Array(vocab.length).fill(0);
   tokens.forEach(token => {
-    const index = vocab.indexOf(token);
-    if (index !== -1) vector[index] += idf[index];
+    const index = vocabIndexMap![token];
+    if (index !== undefined) vector[index] += 1;
   });
-  return vector;
+  return vector.map((freq, i) => freq * idf[i]); // TF * IDF
 }
 
 // -- Main classification function --
 export async function classify(text: string): Promise<string> {
-  const session = await loadModel();
-  const inputVector = Float32Array.from(transform(text));
-  const tensor = new ort.Tensor('float32', inputVector, [1, inputVector.length]);
-  const results = await session.run({ input: tensor });
-  const outputName = session.outputNames[0];             // Automatically detect output
-  const predictedIndex = results[outputName].data[0];
-  return labelMap[predictedIndex];
+  try {
+    if (!text || text.trim() === '') return "unknown";
+
+    const session = await loadModel();
+    const inputVector = Float32Array.from(transform(text));
+    const tensor = new ort.Tensor('float32', inputVector, [1, inputVector.length]);
+    const results = await session.run({ input: tensor });
+
+    const outputName = session.outputNames[0];
+    const outputTensor = results[outputName].data as Float32Array;
+
+    const predictedIndex = outputTensor.indexOf(Math.max(...outputTensor));
+    return labelMap[predictedIndex] || "unknown";
+  } catch (error) {
+    console.error("SVM classification failed:", error);
+    return "unknown";
+  }
 }
 
 
