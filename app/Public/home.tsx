@@ -42,6 +42,9 @@ export default function Home() {
     // Voice Recognition Modal Close with Cleanup
     const closeVoiceRecognitionModal = async () => {
         await stopVoiceRecognition();   // Stop Vosk properly
+        await NativeModules.Vosk.unload(); // full cleanup
+        await new Promise(resolve => setTimeout(resolve, 1000)); // delay
+        setIsModelLoaded(false); // ensure reload works later
         setVoiceRecognitionModalVisible(false);
     };
 
