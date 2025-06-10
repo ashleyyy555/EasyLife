@@ -1,8 +1,8 @@
 import { SafeAreaView , ScrollView ,View, Text, TextInput, Pressable, Image, TouchableOpacity , Modal} from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { doc, getDocs, setDoc, collection, query, where } from "firebase/firestore";
 import { auth, db, storage } from "../../FirebaseConfig"; // use your config here
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import CheckmarkIcon from "@/components/CheckmarkIcon";
@@ -14,22 +14,18 @@ import { router } from "expo-router";
 export default function ReportHistory() {
     const { theme } = useTheme();
 
+    // useStates for Fetching information
+    const [user, setUser] = useState(null);
+    const [ongoingReports, setOngoingReports] = useState([]);
+    const [pastReports, setPastReports] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
             if (firebaseUser) {
-                // @ts-ignore
+                console.log("User detected:", firebaseUser.uid); // ✅
                 setUser(firebaseUser);
-                await fetchInformation(firebaseUser.uid);
-
-
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-
-                }
+                await fetchReports(firebaseUser.uid);
             }
         });
 
@@ -39,20 +35,36 @@ export default function ReportHistory() {
 
 
 
-    const fetchInformation = async (uid: string) => {
+    const fetchReports = async (uid: string) => {
+        setLoading(true);
         try {
-            const docRef = doc(db, "users", uid);
-            const snapshot = await getDoc(docRef);
-            const medicalDocRef = doc(db, "users", uid, "MedicalInformation", "main");
-            const medicalSnapshot = await getDoc(medicalDocRef);
+            const reportsRef = collection(db, "reports");
+            const q = query(reportsRef, where("userId", "==", uid));
+            const querySnapshot = await getDocs(q);
+            console.log("Fetched reports:", querySnapshot.size); // ✅
 
 
-            if (snapshot.exists()) {
-                const data = snapshot.data();
+            const ongoing: any[] = [];
+            const past: any[] = [];
 
-            }
+            querySnapshot.forEach((doc) => {
+                console.log("Report document:", doc.data()); // ✅
+               const report = { id: doc.id, ...doc.data()};
+               if (report.status === "Active") {
+                   ongoing.push(report);
+               } else if (report.status === "Complete") {
+                   past.push(report);
+               }
+            });
+
+            ongoing.reverse();
+            past.reverse();
+            setOngoingReports(ongoing);
+            setPastReports(past);
         } catch (error) {
             console.error("Error fetching user data:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -69,69 +81,77 @@ export default function ReportHistory() {
                         </View>
                     </View>
 
-                    {/* Ongoing Reports Section */}
-                    <View className="w-full mt-6">
-                        <Text
-                            className="text-white font-bold text-xl mb-2"
-                            style={{ alignSelf: "flex-start" }}
-                        >
-                            Ongoing Reports
-                        </Text>
-
-                        <View style={{ backgroundColor: '#1E1E1E'}}>
-                            <Pressable className="p-4 rounded-lg">
-                                <View className="flex-row items-center gap-4">
-                                    <AlertIcon className="mr-4" size={40} />
-                                    <View className="flex gap-1">
-                                        <Text className="text-white text-2xl font-bold">Report 1</Text>
-                                        <Text className="text-white text-l">17 May 2025</Text>
+                    {
+                        loading ? (
+                            <Text className="text-white text-xl mt-10">Loading reports...</Text>
+                        ) : ongoingReports.length === 0 && pastReports.length === 0 ? (
+                            <Text className="text-white text-xl mt-10">No Previous Reports</Text>
+                        ) : (
+                            <>
+                                {/* Ongoing Reports */}
+                                {ongoingReports.length > 0 && (
+                                    <View className="w-full mt-6">
+                                        <Text className="text-white font-bold text-xl mb-2" style={{ alignSelf: "flex-start" }}>
+                                            Ongoing Reports
+                                        </Text>
+                                        <View style={{ backgroundColor: '#1E1E1E' }}>
+                                            {ongoingReports.map((report) => (
+                                                <Pressable key={report.id} className="p-4 rounded-lg" onPress={() => router.push(`/report/${report.id}`)}>
+                                                    <View className="flex-row items-center gap-4">
+                                                        <AlertIcon className="mr-4" size={40} />
+                                                        <View className="flex gap-1">
+                                                            <Text className="text-white text-2xl font-bold">{"Report " + report.reportId || "Unnamed Report"}</Text>
+                                                            <Text className="text-white text-l">
+                                                                { report.date
+                                                                    ? new Date(report.date).toLocaleDateString(undefined, {
+                                                                        day: "2-digit",
+                                                                        year: 'numeric',
+                                                                        month: 'long',
+                                                                    })
+                                                                    : "Invalid Date"
+                                                                }
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+                                                </Pressable>
+                                            ))}
+                                        </View>
                                     </View>
-                                </View>
-                            </Pressable>
+                                )}
 
-                            <Pressable className="p-4 rounded-lg">
-                                <View className="flex-row items-center gap-4">
-                                    <AlertIcon className="mr-4" size={40} />
-                                    <View className="flex gap-1">
-                                        <Text className="text-white text-2xl font-bold">Report 2</Text>
-                                        <Text className="text-white text-l">27 February 2025</Text>
+                                {/* Past Reports */}
+                                {pastReports.length > 0 && (
+                                    <View className="w-full mt-6">
+                                        <Text className="text-white font-bold text-xl mb-2" style={{ alignSelf: "flex-start" }}>
+                                            Past Reports
+                                        </Text>
+                                        <View style={{ backgroundColor: '#1E1E1E' }}>
+                                            {pastReports.map((report) => (
+                                                <Pressable key={report.id} className="p-4 rounded-lg" onPress={() => router.push(`/report/${report.id}`)}>
+                                                    <View className="flex-row items-center gap-4">
+                                                        <CheckmarkIcon className="mr-4" size={40} />
+                                                        <View className="flex gap-1">
+                                                            <Text className="text-white text-2xl font-bold">{"Report " + report.reportId || "Unnamed Report"}</Text>
+                                                            <Text className="text-white text-l">
+                                                                { report.date
+                                                                    ? new Date(report.date).toLocaleDateString(undefined, {
+                                                                        day: "2-digit",
+                                                                        year: 'numeric',
+                                                                        month: 'long',
+                                                                    })
+                                                                    : "Invalid Date"
+                                                                }
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+                                                </Pressable>
+                                            ))}
+                                        </View>
                                     </View>
-                                </View>
-                            </Pressable>
-                        </View>
-                    </View>
-
-                    {/* Past Reports Section */}
-                    <View className="w-full mt-6">
-                        <Text
-                            className="text-white font-bold text-xl mb-2"
-                            style={{ alignSelf: "flex-start" }}
-                        >
-                            Past Reports
-                        </Text>
-
-                        <View style={{ backgroundColor: '#1E1E1E'}}>
-                            <Pressable className="p-4 rounded-lg">
-                                <View className="flex-row items-center gap-4">
-                                    <CheckmarkIcon className="mr-4" size={40} />
-                                    <View className="flex gap-1">
-                                        <Text className="text-white text-2xl font-bold">Report 1</Text>
-                                        <Text className="text-white text-l">17 May 2025</Text>
-                                    </View>
-                                </View>
-                            </Pressable>
-
-                            <Pressable className="p-4 rounded-lg">
-                               <View className="flex-row items-center gap-4">
-                                   <CheckmarkIcon className="mr-4" size={40} />
-                                   <View className="flex gap-1">
-                                       <Text className="text-white text-2xl font-bold">Report 2</Text>
-                                       <Text className="text-white text-l">27 February 2025</Text>
-                                   </View>
-                               </View>
-                            </Pressable>
-                        </View>
-                    </View>
+                                )}
+                            </>
+                        )
+                    }
                 </View>
             </ScrollView>
         </SafeAreaView>

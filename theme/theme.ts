@@ -8,7 +8,7 @@ export const LightTheme = {
 };
 
 export const DarkTheme = {
-    background: "#1E1E1E",
+    background: "#242424",
     text: "#FFFFFF",
     opposite: "#000000",
     primary: "#BB86FC", // Purple button color for dark mode
