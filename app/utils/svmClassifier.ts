@@ -58,9 +58,14 @@ export async function classify(text: string): Promise<string> {
     const results = await session.run({ input: tensor });
 
     const outputName = session.outputNames[0];
-    const outputTensor = results[outputName].data as Float32Array;
+    const outputTensor = results[outputName].data;
 
-    const predictedIndex = outputTensor.indexOf(Math.max(...outputTensor));
+    // Fix: Handle BigInt or Float outputs
+    const outputArray = Array.from(outputTensor, v =>
+      typeof v === 'bigint' ? Number(v) : v
+    );
+
+    const predictedIndex = outputArray.indexOf(Math.max(...outputArray));
     return labelMap[predictedIndex] || "unknown";
   } catch (error) {
     console.error("SVM classification failed:", error);
