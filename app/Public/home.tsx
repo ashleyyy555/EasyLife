@@ -18,6 +18,7 @@ import { Audio } from 'expo-av';
 import { classify } from '@/app/utils/svmClassifier';
 
 const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
+let isClassifying = false; // Prevents parallel classify() calls
 
 export default function Home() {
     const { theme } = useTheme();
@@ -38,7 +39,11 @@ export default function Home() {
         setReportModalVisible(false);
         setVoiceRecognitionModalVisible(true);
     }
-    const closeVoiceRecognitionModal = () => setVoiceRecognitionModalVisible(false);
+    // Voice Recognition Modal Close with Cleanup
+    const closeVoiceRecognitionModal = async () => {
+        await stopVoiceRecognition();   // Stop Vosk properly
+        setVoiceRecognitionModalVisible(false);
+    };
 
     // Select Location Message Modal
     const [selectLocationMessageModalVisible, setSelectLocationMessageModalVisible] = useState(false);
@@ -134,19 +139,22 @@ export default function Home() {
         });
 
         const finalResultSubscription = eventEmitter.addListener('onFinalResult', async (result: string) => {
-            console.log('Vosk final result:', result);
-            setTranscription(result);
-            console.log('Transcription:', result);
+            if (isClassifying) return;  // Prevent overlap
+            isClassifying = true;
             try {
-                const predictionResult = await classify(result);    //takes in finalResult and make classification
+                console.log('Vosk final result:', result);
+                setTranscription(result);
+                const predictionResult = await classify(result);
                 console.log('SVM Prediction:', predictionResult);
                 setPrediction(predictionResult);
             } catch (error) {
                 console.error('Error classifying transcription:', error);
                 setPrediction("unknown");
+            } finally {
+                isClassifying = false;
             }
         });
-
+        
         const timeoutSubscription = eventEmitter.addListener('onTimeout', () => {
             console.log('Vosk timeout');
         });
