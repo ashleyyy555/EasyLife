@@ -6,7 +6,6 @@ import { doc, getDoc, setDoc, collection, query, where } from "firebase/firestor
 import { auth, db, storage } from "@/FirebaseConfig"; // use your config here
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import LocationkIcon from "@/components/LocationIcon";
-import AlertIcon from "@/components/AlertIcon";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 
 
@@ -18,11 +17,16 @@ export default function DetailedReport() {
     // useStates for Fetching information
     const [status, setStatus] = useState();
     const [date, setDate] = useState(new Date());
+    const [latitude, setLatitude] = useState();
+    const [longitude, setLongitude] = useState();
+    const [location, setLocation] = useState();
+    const [operatorProfile, setOperatorProfile] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [transcribedText, setTranscribedText] = useState("");
     const [emergencyService, setEmergencyService] = useState("");
     const [operatorId, setOperatorId] = useState("");
+    const [error, setError] = useState("");
 
     const [selectedImage, setSelectedImage] = useState(null);
 
@@ -36,6 +40,30 @@ export default function DetailedReport() {
         });
 
         return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        const fetchLocationName = async () => {
+            console.log("fetching location");
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+                );
+
+                if (!response.ok) throw new Error("Failed to fetch location");
+
+                const data = await response.json();
+                console.log(data.address);
+                const { quarter, city, state } = data.address;
+                const shortLocation = quarter || city || state || "Unknown Location";
+
+                setLocation(shortLocation); // This gives a full address string
+            } catch (err) {
+                setError(err.message);
+            }
+        };
+
+        fetchLocationName();
     }, []);
 
 
@@ -52,14 +80,46 @@ export default function DetailedReport() {
                 const reportData = reportDoc.data();
                 setDate(reportData.date);
                 setTranscribedText(reportData.transcribedText);
+                setLatitude(reportData.location.latitude);
+                setLongitude(reportData.location.longitude);
                 setStatus(reportData.status);
                 setOperatorId(reportData.assignedOperator);
                 setEmergencyService(reportData.assignedEmergencyService);
+
+                // 🔽 Fetch operator profile after setting operatorId
+                if (reportData.assignedOperator) {
+                    const operatorRef = doc(db, "operators", reportData.assignedOperator);
+                    const operatorSnap = await getDoc(operatorRef);
+                    if (operatorSnap.exists()) {
+                        setOperatorProfile(operatorSnap.data());
+                        setSelectedImage(operatorProfile.profilePicUrl);
+                        console.log(operatorSnap.data());
+                    } else {
+                        console.warn("Assigned operator not found");
+                    }
+                }
             }
         } catch (error) {
             console.error("Error fetching user data:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchOperatorProfile = async (operatorId) => {
+        try {
+            const docRef = doc(db, "operators", operatorId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                return docSnap.data(); // this is the operator profile
+            } else {
+                console.warn("No such operator found.");
+                return null;
+            }
+        } catch (error) {
+            console.error("Error fetching operator profile:", error);
+            return null;
         }
     };
 
@@ -72,9 +132,17 @@ export default function DetailedReport() {
                     <View className="flex-row justify-between items-center self-center" style={{ backgroundColor: theme.background, width: "90%" }}>
                         <Text className="font-bold text-white text-3xl">Report {id}</Text>
 
-                        <View style={{ backgroundColor: "#87F99C", borderRadius: 16, paddingTop: 4, paddingBottom: 4, paddingLeft: 8, paddingRight: 8 }}>
-                            <Text className="font-bold text-xl text-[#007D13]">Complete</Text>
-                        </View>
+                        {status === "Active" && (
+                            <View style={{ backgroundColor: "#F98789", borderRadius: 16, paddingVertical: 4, paddingHorizontal: 8 }}>
+                                <Text className="font-bold text-xl text-[#7D0002]">Active</Text>
+                            </View>
+                        )}
+
+                        {status === "Complete" && (
+                            <View style={{ backgroundColor: "#87F99C", borderRadius: 16, paddingVertical: 4, paddingHorizontal: 8 }}>
+                                <Text className="font-bold text-xl text-[#007D13]">Complete</Text>
+                            </View>
+                        )}
                     </View>
 
                     <View className="self-center mt-4" style={{ width: "90%"}}>
@@ -92,7 +160,7 @@ export default function DetailedReport() {
 
                     <View className="flex-row items-center self-center mt-4" style={{ width: "90%"}}>
                         <LocationkIcon size={20} color={theme.text} />
-                        <Text className="ml-2 font-bold text-xl text-white">Taylor's Lakeside Campus</Text>
+                        <Text className="ml-2 font-bold text-xl text-white">{location}</Text>
                     </View>
 
                     <View className="self-center mt-4" style={{ width: "90%", height: 1, backgroundColor: '#888' }} />
@@ -119,7 +187,7 @@ export default function DetailedReport() {
                            />
 
                            <View className="ml-4 items-start">
-                               <Text className="font-bold text-2xl text-white">Yuki Tsunoda</Text>
+                               <Text className="font-bold text-2xl text-white">{operatorProfile.fullName}</Text>
                                <Text className="font-bold text-l text-white mt-1">{emergencyService}</Text>
                            </View>
                        </View>
