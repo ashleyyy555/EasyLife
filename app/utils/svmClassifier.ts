@@ -27,6 +27,14 @@ export async function loadModel() {
   return session;
 }
 
+// Add unloadModel function
+export function unloadModel() {
+  if (session) {
+    console.log("Unloading ONNX model session.");
+    session = null;
+  }
+}
+
 
 let vocabIndexMap: { [token: string]: number } | null = null;
 
