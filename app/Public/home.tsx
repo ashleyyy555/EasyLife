@@ -256,13 +256,13 @@ export default function Home() {
             // Start with default options
             console.log('Starting voice recognition...');
             try {
-                console.log('Calling Vosk.start...'); // ✅ [ADDED] for crash tracing
+                console.log('Calling Vosk.start...'); // [ADDED] for crash tracing
                 const startResult = await NativeModules.Vosk.start({
                     timeout: 30000,
                 });
 
                 console.log('startResult', startResult);
-                console.log('Vosk.start() completed'); // ✅ [ADDED]
+                console.log('Vosk.start() completed'); // [ADDED]
                 
                 if (!startResult) {
                     throw new Error('Failed to start voice recognition');
