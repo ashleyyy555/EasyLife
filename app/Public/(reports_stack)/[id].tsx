@@ -21,6 +21,7 @@ export default function DetailedReport() {
     const [longitude, setLongitude] = useState();
     const [location, setLocation] = useState();
     const [operatorProfile, setOperatorProfile] = useState(null);
+    const [operatorName, setOperatorName] = useState("N/A");
 
     const [loading, setLoading] = useState(true);
     const [transcribedText, setTranscribedText] = useState("");
@@ -44,8 +45,8 @@ export default function DetailedReport() {
 
     useEffect(() => {
         const fetchLocationName = async () => {
-            console.log("fetching location");
             try {
+                console.log("Fetching location...");
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
                 );
@@ -53,18 +54,22 @@ export default function DetailedReport() {
                 if (!response.ok) throw new Error("Failed to fetch location");
 
                 const data = await response.json();
-                console.log(data.address);
+                console.log("Location data:", data.address);
                 const { quarter, city, state } = data.address;
                 const shortLocation = quarter || city || state || "Unknown Location";
 
-                setLocation(shortLocation); // This gives a full address string
-            } catch (err) {
+                setLocation(shortLocation);
+            } catch (err: any) {
                 setError(err.message);
             }
         };
 
-        fetchLocationName();
-    }, []);
+        // 🔁 Run only if both lat & lon are ready
+        if (latitude != null && longitude != null) {
+            fetchLocationName();
+        }
+    }, [latitude, longitude]);
+
 
 
 
@@ -91,9 +96,14 @@ export default function DetailedReport() {
                     const operatorRef = doc(db, "operators", reportData.assignedOperator);
                     const operatorSnap = await getDoc(operatorRef);
                     if (operatorSnap.exists()) {
-                        setOperatorProfile(operatorSnap.data());
-                        setSelectedImage(operatorProfile.profilePicUrl);
-                        console.log(operatorSnap.data());
+                        const operatorData = operatorSnap.data();
+                        setOperatorProfile(operatorData);
+
+                        if (operatorData.profilePicUrl) {
+                            setSelectedImage(operatorData.profilePicUrl);
+                        }
+
+                        console.log(operatorData);
                     } else {
                         console.warn("Assigned operator not found");
                     }
@@ -187,8 +197,8 @@ export default function DetailedReport() {
                            />
 
                            <View className="ml-4 items-start">
-                               <Text className="font-bold text-2xl text-white">{operatorProfile.fullName}</Text>
-                               <Text className="font-bold text-l text-white mt-1">{emergencyService}</Text>
+                               <Text className="font-bold text-2xl text-white">{operatorProfile?.fullName ?? "N/A"}</Text>
+                               <Text className="font-bold text-l text-white mt-1">{emergencyService ?? "N/A"}</Text>
                            </View>
                        </View>
                     </View>
