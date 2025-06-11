@@ -152,8 +152,8 @@ export default function Home() {
                 setTranscription(result);
 
                 // Ensure audio system is stable before classification
-                console.log('Waiting briefly before classification...');
-                await new Promise(resolve => setTimeout(resolve, 500));
+                //console.log('Waiting briefly before classification...');
+                //await new Promise(resolve => setTimeout(resolve, 500));
 
                 console.log('Calling classify() with result:', result);
                 const predictionResult = await classify(result);
