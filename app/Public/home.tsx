@@ -316,25 +316,6 @@ export default function Home() {
     };
 
 
-    const stopVoiceRecognition = async () => {
-        try {
-            if (isListening) {
-                const result = await NativeModules.Vosk.stop();
-                console.log('result', result);
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setIsListening(false);
-                console.log('Voice recognition stopped');
-                // Add delay after stopping
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-            }
-        } catch (error: any) {
-            console.error('Error stopping voice recognition:', error);
-            Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
-        }
-    };
-
-
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
             .then(response => response.text())  // Get response as text
