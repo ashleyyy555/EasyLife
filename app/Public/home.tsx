@@ -19,6 +19,9 @@ import { classify } from '@/app/utils/svmClassifier';
 
 const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
 let isClassifying = false; // Prevents parallel classify() calls
+let finalResultSubscription: any = null; // [ADDED]
+let subscriptions: any[] = []; // [ADDED]
+
 
 export default function Home() {
     const { theme } = useTheme();
@@ -182,11 +185,29 @@ export default function Home() {
         };
     }, []);
 
+    const stopVoiceRecognition = async () => {
+        try {
+            if (isListening) {
+                const result = await NativeModules.Vosk.stop();
+                console.log('result', result);
+                setIsListening(false);
+                console.log('Voice recognition stopped');
+                // Add delay after stopping
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+            }
+        } catch (error: any) {
+            console.error('Error stopping voice recognition:', error);
+            Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
+        }
+    };
+
     const startVoiceRecognition = async() => {
         console.log('Starting voice recognition process...');
         try {
             // Request microphone permission first
             await requestMicPermission();
+            await stopVoiceRecognition(); // [ADDED] ensure previous session stopped
             console.log('Permission check passed');
 
             // Configure audio for recording BEFORE any model operations
@@ -219,11 +240,13 @@ export default function Home() {
                     setIsModelLoaded(false);
                     // Add delay after cleanup
                     console.log('Waiting after cleanup...');
+
                     await new Promise(resolve => setTimeout(resolve, 1000));
 
                     setIsModelLoaded(false);
                     console.log('isModelLoaded set to false');
         
+
                 } catch (cleanupError) {
                     console.error('Error during cleanup:', cleanupError);
                 }
@@ -239,7 +262,7 @@ export default function Home() {
                     console.log('Vosk model loaded successfully');
                     // Add delay after loading
                     console.log('Waiting after model load...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                 } catch (loadError) {
                     console.error('Error loading model:', loadError);
                     throw new Error('Failed to load voice recognition model');
@@ -249,11 +272,13 @@ export default function Home() {
             // Start with default options
             console.log('Starting voice recognition...');
             try {
+                console.log('Calling Vosk.start...'); // [ADDED] for crash tracing
                 const startResult = await NativeModules.Vosk.start({
-                    timeout: 100000000,
+                    timeout: 30000,
                 });
 
                 console.log('startResult', startResult);
+                console.log('Vosk.start() completed'); // [ADDED]
                 
                 if (!startResult) {
                     throw new Error('Failed to start voice recognition');
@@ -290,6 +315,7 @@ export default function Home() {
         }
     };
 
+
     const stopVoiceRecognition = async () => {
         try {
             if (isListening) {
@@ -307,6 +333,7 @@ export default function Home() {
             Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
         }
     };
+
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
