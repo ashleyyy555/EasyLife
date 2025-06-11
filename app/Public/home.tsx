@@ -16,6 +16,7 @@ import {Region} from "react-native-maps";
 import * as Location from "expo-location"; 
 import { Audio } from 'expo-av';
 import { classify } from '@/app/utils/svmClassifier';
+import { unloadModel } from '@/app/utils/svmClassifier';
 
 const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
 let isClassifying = false; // Prevents parallel classify() calls
@@ -46,7 +47,8 @@ export default function Home() {
     const closeVoiceRecognitionModal = async () => {
         await stopVoiceRecognition();   // Stop Vosk properly
         await NativeModules.Vosk.unload(); // full cleanup
-        await new Promise(resolve => setTimeout(resolve, 1000)); // delay
+        unloadModel();  // cleanup SVM ONNX session
+        await new Promise(resolve => setTimeout(resolve, 1000)); // delay 
         setIsModelLoaded(false); // ensure reload works later
         setVoiceRecognitionModalVisible(false);
     };
