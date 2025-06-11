@@ -147,8 +147,15 @@ export default function Home() {
             try {
                 console.log('Vosk final result:', result);
                 setTranscription(result);
+
+                // Ensure audio system is stable before classification
+                console.log('Waiting briefly before classification...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                console.log('Calling classify() with result:', result);
                 const predictionResult = await classify(result);
                 console.log('SVM Prediction:', predictionResult);
+                
                 setPrediction(predictionResult);
             } catch (error) {
                 console.error('Error classifying transcription:', error);
@@ -205,12 +212,18 @@ export default function Home() {
                 try {
                     await NativeModules.Vosk.stop();
                     console.log('Previous instance stopped');
+                    await new Promise(resolve => setTimeout(resolve, 500)); // let stop settle
+                    
                     await NativeModules.Vosk.unload();
                     console.log('Previous model unloaded');
                     setIsModelLoaded(false);
                     // Add delay after cleanup
                     console.log('Waiting after cleanup...');
                     await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    setIsModelLoaded(false);
+                    console.log('isModelLoaded set to false');
+        
                 } catch (cleanupError) {
                     console.error('Error during cleanup:', cleanupError);
                 }
@@ -221,6 +234,7 @@ export default function Home() {
                 console.log('Loading Vosk model...');
                 try {
                     await NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // let load settle
                     setIsModelLoaded(true);
                     console.log('Vosk model loaded successfully');
                     // Add delay after loading
@@ -281,6 +295,7 @@ export default function Home() {
             if (isListening) {
                 const result = await NativeModules.Vosk.stop();
                 console.log('result', result);
+                await new Promise(resolve => setTimeout(resolve, 500));
                 setIsListening(false);
                 console.log('Voice recognition stopped');
                 // Add delay after stopping
