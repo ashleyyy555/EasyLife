@@ -28,12 +28,12 @@ export async function loadModel() {
 }
 
 // Add unloadModel function
-//export function unloadModel() {
-  //if (session) {
-    //console.log("Unloading ONNX model session.");
-    //session = null;
-  //}
-//}
+export function unloadModel() {
+  if (session) {
+    console.log("Unloading ONNX model session.");
+    session = null;
+  }
+}
 
 
 //let vocabIndexMap: { [token: string]: number } | null = null;
