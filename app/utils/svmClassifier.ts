@@ -28,15 +28,15 @@ export async function loadModel() {
 }
 
 // Add unloadModel function
-export function unloadModel() {
-  if (session) {
-    console.log("Unloading ONNX model session.");
-    session = null;
-  }
-}
+//export function unloadModel() {
+  //if (session) {
+    //console.log("Unloading ONNX model session.");
+    //session = null;
+  //}
+//}
 
 
-let vocabIndexMap: { [token: string]: number } | null = null;
+//let vocabIndexMap: { [token: string]: number } | null = null;
 
 // -- Converts input text into a TF-IDF vector --
 function transform(text: string): number[] {
@@ -49,20 +49,27 @@ function transform(text: string): number[] {
   }
 
   // Cache the vocab-to-index map
-  if (!vocabIndexMap) {
-    vocabIndexMap = {};
-    vocab.forEach((word, i) => {
-      vocabIndexMap![word] = i;
-    });
-  }
+  //if (!vocabIndexMap) {
+    //vocabIndexMap = {};
+    //vocab.forEach((word, i) => {
+      //vocabIndexMap![word] = i;
+    //});
+  //}
+
+  // Create vocab-index map
+  const vocabIndexMap: { [token: string]: number } = {};
+  vocab.forEach((word, i) => {
+    vocabIndexMap[word] = i;
+  }); 
   
   const tokens = text.toLowerCase().match(/\b\w+\b/g) || [];
   const vector = Array(vocab.length).fill(0);
   tokens.forEach(token => {
-    const index = vocabIndexMap![token];
-    if (index !== undefined) vector[index] += 1;
-  });
-  return vector.map((freq, i) => freq * idf[i]); // TF * IDF
+    const index = vocabIndexMap[token];
+    if (typeof index === 'number') {
+      vector[index] += idf[index];
+    });
+  return vector;
 }
 
 // -- Main classification function --
@@ -73,11 +80,12 @@ export async function classify(text: string): Promise<string> {
     console.log("Classify called with input:", text);
     
     console.log("Calling loadModel... (make sure Vosk is fully initialized)");
-    const session = await loadModel();
+    const session = await loadModel();  //ensure model is loaded
     console.log("ONNX model loaded, proceeding to inference...");
     
     const inputVector = Float32Array.from(transform(text));
     const tensor = new ort.Tensor('float32', inputVector, [1, inputVector.length]);
+    
     const results = await session.run({ input: tensor });
 
     const outputName = session.outputNames[0];
@@ -85,16 +93,12 @@ export async function classify(text: string): Promise<string> {
 
     console.log("Model inference complete, raw output:", outputTensor); 
 
-    // Fix: Handle BigInt or Float outputs
-    const outputArray = Array.from(outputTensor, v =>
-      typeof v === 'bigint' ? Number(v) : v
-    );
-
-    const predictedIndex = outputArray.indexOf(Math.max(...outputArray));
+    const predictedIndex = outputTensor[0];
     console.log("Predicted index:", predictedIndex);
-    
-    return labelMap[predictedIndex] || "unknown";
+    const predictionLabel = labelMap[predictedIndex] || "unknown";
+  
     console.log("Final predicted label:", predictionLabel);
+    return predictionLabel;
     
   } catch (error) {
     console.error("SVM classification failed:", error);
