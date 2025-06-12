@@ -2,7 +2,7 @@ import { SafeAreaView , ScrollView ,View, Text, TextInput, Pressable, Image, Tou
 import { useTheme } from "@/context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { doc, getDocs, setDoc, collection, query, where } from "firebase/firestore";
+import { doc, getDocs, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { auth, db, storage } from "@/FirebaseConfig"; // use your config here
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import CheckmarkIcon from "@/components/CheckmarkIcon";
@@ -25,7 +25,30 @@ export default function ReportHistory() {
             if (firebaseUser) {
                 console.log("User detected:", firebaseUser.uid); // ✅
                 setUser(firebaseUser);
-                await fetchReports(firebaseUser.uid);
+
+                const reportsRef = collection(db, "reports");
+                const q = query(reportsRef, where("userId", "==", firebaseUser.uid));
+
+                const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+                    const ongoing: any[] = [];
+                    const past: any[] = [];
+
+                    querySnapshot.forEach((doc) => {
+                        const report = { id: doc.id, ...doc.data() };
+                        if (report.status === "Active") {
+                            ongoing.unshift(report);
+                        } else if (report.status === "Complete") {
+                            past.unshift(report);
+                        }
+                    });
+
+                    setOngoingReports(ongoing);
+                    setPastReports(past);
+                    setLoading(false);
+                });
+
+                // Return inner unsubscribe on unmount
+                return () => unsubscribeSnapshot();
             }
         });
 
@@ -35,36 +58,34 @@ export default function ReportHistory() {
 
 
 
-    const fetchReports = async (uid: string) => {
-        setLoading(true);
-        try {
-            const reportsRef = collection(db, "reports");
-            const q = query(reportsRef, where("userId", "==", uid));
-            const querySnapshot = await getDocs(q);
-
-
-            const ongoing: any[] = [];
-            const past: any[] = [];
-
-            querySnapshot.forEach((doc) => {
-               const report = { id: doc.id, ...doc.data()};
-               if (report.status === "Active") {
-                   ongoing.push(report);
-               } else if (report.status === "Complete") {
-                   past.push(report);
-               }
-            });
-
-            ongoing.reverse();
-            past.reverse();
-            setOngoingReports(ongoing);
-            setPastReports(past);
-        } catch (error) {
-            console.error("Error fetching user data:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // const fetchReports = async (uid: string) => {
+    //     setLoading(true);
+    //     try {
+    //         const reportsRef = collection(db, "reports");
+    //         const q = query(reportsRef, where("userId", "==", uid));
+    //         const querySnapshot = await getDocs(q);
+    //
+    //
+    //         const ongoing: any[] = [];
+    //         const past: any[] = [];
+    //
+    //         querySnapshot.forEach((doc) => {
+    //            const report = { id: doc.id, ...doc.data()};
+    //            if (report.status === "Active") {
+    //                ongoing.unshift(report);
+    //            } else if (report.status === "Complete") {
+    //                past.unshift(report);
+    //            }
+    //         });
+    //
+    //         setOngoingReports(ongoing);
+    //         setPastReports(past);
+    //     } catch (error) {
+    //         console.error("Error fetching user data:", error);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
 
     // @ts-ignore
