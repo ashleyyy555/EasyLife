@@ -424,7 +424,7 @@ export default function Home() {
                 reportFor: reportFor,
                 classification: [prediction || "unknown"], // autio fill in the prediction
                 transcribedText: transcription || "N/A",  // autio fill in the transcription
-                status: "Complete",
+                status: "Active",
             });
 
             sendReportId(reportId);

@@ -2,7 +2,7 @@ import { SafeAreaView , ScrollView ,View, Text, TextInput, Pressable, Image, Tou
 import { useTheme } from "@/context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, query, where } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, updateDoc } from "firebase/firestore";
 import { auth, db, storage } from "@/FirebaseConfig"; // use your config here
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import LocationkIcon from "@/components/LocationIcon";
@@ -70,9 +70,45 @@ export default function DetailedReport() {
         }
     }, [latitude, longitude]);
 
+    const setReportComplete = async (id: string) => {
+        try {
+            const reportsRef = doc(db, "reports", id);
+            const reportDoc = await getDoc(reportsRef);
 
+            if (reportDoc.exists()) {
+                const reportData = reportDoc.data();
 
+                // Update report status
+                await updateDoc(reportsRef, {
+                    status: "Complete",
+                });
 
+                // If operator is assigned, update their status
+                if (reportData.assignedOperator) {
+                    const operatorRef = doc(db, "operators", reportData.assignedOperator);
+                    await updateDoc(operatorRef, {
+                        status: "available", // spelling fix here
+                    });
+                }
+
+                console.log("Report and operator status updated.");
+            } else {
+                console.warn("Report document does not exist.");
+            }
+        } catch (error) {
+            console.error("Error updating report:", error);
+        }
+    };
+
+    const cancelReport = async (id: string) => {
+        setReportComplete(id);
+        router.replace("/Public/(reports_stack)");
+    }
+
+    const completeReport = async (id: string) => {
+        setReportComplete(id);
+        router.replace("/Public/(reports_stack)");
+    }
 
     const fetchReports = async (uid: string) => {
         setLoading(true);
@@ -202,6 +238,23 @@ export default function DetailedReport() {
                            </View>
                        </View>
                     </View>
+
+                    {status === "Active" && (
+                        <>
+                            <View className="self-center mt-6" style={{ width: "90%", height: 1, backgroundColor: '#888' }} />
+
+                            <View className="flex-row items-center self-center justify-between mt-4" style={{ width: "90%"}}>
+                                <Pressable style={{ backgroundColor: "#E93838", borderRadius: 16, paddingVertical: 4, paddingHorizontal: 8 }} onPress={() => cancelReport(id)}>
+                                    <Text className="font-bold text-xl text-white">Cancel Report</Text>
+                                </Pressable>
+
+                                <Pressable style={{ backgroundColor: "#1CAF49", borderRadius: 16, paddingVertical: 4, paddingHorizontal: 8 }} onPress={() => completeReport(id)}>
+                                    <Text className="font-bold text-xl text-white">Complete Report</Text>
+                                </Pressable>
+                            </View>
+                        </>
+                    )}
+
                 </View>
             </ScrollView>
         </SafeAreaView>
