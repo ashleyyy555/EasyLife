@@ -68,7 +68,8 @@ function transform(text: string): number[] {
     const index = vocabIndexMap[token];
     if (typeof index === 'number') {
       vector[index] += idf[index];
-    });
+    }
+  });
   return vector;
 }
 
