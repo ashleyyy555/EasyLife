@@ -151,11 +151,6 @@ export default function Home() {
             setIsModelBusy(false);
             setIsListening(false);
         });
-        const partialResultSubscription = eventEmitter.addListener('onPartialResult', (result: string) => {
-            console.log('Vosk partial result:', result);
-            setTranscription(result);
-            console.log('Transcription:', result);
-        });
         const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
             console.log('Vosk final result:', result);
             setTranscription(result);
@@ -169,7 +164,6 @@ export default function Home() {
         // Only remove listeners on unmount, not on every pendingAction change
         return () => {
             errorSubscription.remove();
-            partialResultSubscription.remove();
             finalResultSubscription.remove();
             timeoutSubscription.remove();
             cleanupListener.remove();
