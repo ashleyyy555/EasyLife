@@ -1,11 +1,11 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, TouchableOpacity, Image } from "react-native";
+import { View, TouchableOpacity, Image, Text, Pressable } from "react-native";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/FirebaseConfig";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import SideMenu from '@/components/SideMenu';
 import { Portal } from 'react-native-paper';
 import MedicalRecordsIcon from "@/components/MedicalRecordsIcon"
@@ -16,6 +16,7 @@ import LocationIcon from "@/components/LocationIcon";
 export default function Layout() {
     const [menuVisible, setMenuVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [status, setStatus] = useState<string | null>(null);
     const { theme } = useTheme();
 
     useEffect(() => {
@@ -24,12 +25,13 @@ export default function Layout() {
 
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDocRef = doc(db, "operators", firebaseUser.uid);
 
                 // Subscribe to realtime updates of the user doc
                 unsubscribeFromUserDoc = onSnapshot(userDocRef, (userDoc) => {
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
+                        setStatus(userData.status);
                         if (userData.profilePicUrl) {
                             setSelectedImage(userData.profilePicUrl);
                         } else {
@@ -78,7 +80,7 @@ export default function Layout() {
     const HeaderLeft = () => (
         <TouchableOpacity onPress={() => console.log("Settings Pressed")}>
             <Image
-                source={require("@/assets/images/EasyLife-logo.png")} // Update path if needed
+                source={require("../../assets/images/EasyLife-logo.png")} // Update path if needed
                 style={{
                     width: 190,
                     height: 190,
@@ -89,37 +91,34 @@ export default function Layout() {
         </TouchableOpacity>
     );
 
+    const handleStatusChange = async () => {
+        const user = auth.currentUser;
+
+        if (!user) return;
+
+        const newStatus = status === "available" ? "busy" : "available";
+
+        try {
+            const operatorRef = doc(db, "operators", user.uid);
+            await updateDoc(operatorRef, {
+                status: newStatus
+            });
+            setStatus(newStatus); // Update local state after Firestore is updated
+            console.log("✅ Status updated to:", newStatus);
+        } catch (error) {
+            console.error("❌ Error updating status:", error);
+        }
+    };
+
     const HeaderRight = () => (
         <View style={{ marginRight: 15 }}>
-            <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
-                <Image
-                    source={{
-                        uri: selectedImage || "https://upload.wikimedia.org/wikipedia/en/a/a6/Pok%C3%A9mon_Pikachu_art.png",
-                    }}
-                    style={{ width: 40, height: 40, borderRadius: 20 }}
-                />
-            </TouchableOpacity>
-            <Portal>
-                {menuVisible && (
-                    <View
-                        style={{
-                            position: 'absolute',
-                            top: 50,
-                            right: 0,
-                            backgroundColor: 'white',
-                            borderRadius: 8,
-                            padding: 10,
-                            shadowColor: "#000",
-                            shadowOpacity: 0.2,
-                            shadowRadius: 5,
-                            elevation: 5,
-                            zIndex: 100,
-                        }}
-                    >
-                        <SideMenu isOpen={menuVisible} setIsOpen={setMenuVisible} />
-                    </View>
-                )}
-            </Portal>
+            <Pressable
+            onPress={handleStatusChange}
+            >
+                <Text className="text-xl text-white font-bold">
+                    Status: {status}
+                </Text>
+            </Pressable>
         </View>
     );
 
@@ -135,7 +134,6 @@ export default function Layout() {
                     elevation: 0, // ✅ removes shadow on Android
                 },
                 headerTransparent: false,
-                headerShown: true,
                 // headerRight: () => <HeaderRight />,
             }}
         >
@@ -144,6 +142,7 @@ export default function Layout() {
                 options={{
                     title: "Home",
                     headerLeft: () => <HeaderLeft />,
+                    headerRight: () => <HeaderRight />,
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="home-outline" size={size} color={color} />
                     ),
@@ -170,11 +169,9 @@ export default function Layout() {
             />
 
             <Tabs.Screen
-                name="(reports_stack)"
+                name="emergencyReport"
                 options={{
-                    title: "Reports",
-                    headerTransparent: false,
-                    headerShown: false,
+                    title: "Report",
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="map-outline" size={size} color={color} />
                     ),
@@ -190,14 +187,7 @@ export default function Layout() {
                 }}
             />
 
-            <Tabs.Screen
-                // Name of the route to hide.
-                name="DetailedReport"
-                options={{
-                    // This tab will no longer show up in the tab bar.
-                    href: null,
-                }}
-            />
+
         </Tabs>
     );
 }

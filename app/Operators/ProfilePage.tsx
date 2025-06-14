@@ -3,7 +3,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db, storage } from "../../FirebaseConfig"; // use your config here
+import { auth, db } from "../../FirebaseConfig"; // use your config here
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
@@ -26,7 +26,6 @@ export default function ProfilePage() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const openPicturePopup = () => setIsModalVisible(true);
     const closePicturePopup = () => setIsModalVisible(false);
-    const [pictureChanged, setPictureChanged] = useState(false);
 
 
     useEffect(() => {
@@ -37,7 +36,7 @@ export default function ProfilePage() {
                 await fetchInformation(firebaseUser.uid);
 
 
-                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDocRef = doc(db, "operators", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
 
                 if (userDoc.exists()) {
@@ -91,7 +90,6 @@ export default function ProfilePage() {
         if (!result.canceled) {
             setSelectedImage(result.assets[0].uri);
             closePicturePopup?.(); // optional if you have a modal
-            setPictureChanged(true);
         }
     };
 
@@ -106,7 +104,6 @@ export default function ProfilePage() {
         if (!result.canceled) {
             setSelectedImage(result.assets[0].uri);
             closePicturePopup();
-            setPictureChanged(true);
         }
     };
 
@@ -130,9 +127,9 @@ export default function ProfilePage() {
 
     const fetchInformation = async (uid: string) => {
         try {
-            const docRef = doc(db, "users", uid);
+            const docRef = doc(db, "operators", uid);
             const snapshot = await getDoc(docRef);
-            const medicalDocRef = doc(db, "users", uid, "MedicalInformation", "main");
+            const medicalDocRef = doc(db, "operators", uid, "MedicalInformation", "main");
             const medicalSnapshot = await getDoc(medicalDocRef);
 
 
@@ -165,7 +162,7 @@ export default function ProfilePage() {
 
         try {
             // @ts-ignore
-            await setDoc(doc(db, "users", user.uid), {
+            await setDoc(doc(db, "operators", user.uid), {
                 weight: weight.trim(),
                 height: height.trim(),
                 address: addressLine.trim(),
@@ -174,46 +171,14 @@ export default function ProfilePage() {
             }, { merge: true });
 
             // @ts-ignore
-            await setDoc(doc(db, "users", user.uid, "MedicalInformation", "main"), {
+            await setDoc(doc(db, "operators", user.uid, "MedicalInformation", "main"), {
                 emergencyContactName: emergencyContactName.trim(),
                 emergencyContact: emergencyContactNumber.trim(),
             }, { merge: true });
 
-            console.log("Pressed before picture changed")
-            if (pictureChanged == true) {
-                console.log("Picture changed pressed");
-                try {
-                    // 1. Convert URI to Blob
-                    // @ts-ignore
-                    const blob = await getBlobFroUri(selectedImage);
-
-                    // 2. Create a reference in Firebase Storage
-                    // @ts-ignore
-                    const storageRef = ref(storage, `profilePics/${user.uid}.jpg`);
-
-                    // 3. Upload the blob
-                    // @ts-ignore
-                    await uploadBytes(storageRef, blob);
-
-                    // 4. Get download URL
-                    const downloadURL = await getDownloadURL(storageRef);
-
-                    // 5. Save download URL to Firestore
-                    // @ts-ignore
-                    const userDocRef = doc(db, "users", user.uid);
-                    await setDoc(userDocRef, {
-                        profilePicUrl: downloadURL
-                    }, { merge: true });
-
-                    console.log("✅ Profile picture uploaded successfully!");
-                } catch (e) {
-                    console.error("🔥 Upload error:", e);
-                }
-            }
-
             console.log("Successfully uploaded");
         } catch (error) {
-            console.error("Error updating profile", error);
+            console.error("Error updating gender:", error);
         }
     };
 

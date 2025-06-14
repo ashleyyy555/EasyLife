@@ -351,7 +351,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = VNM5A4UMXJ;
+				DEVELOPMENT_TEAM = VGND858YNQ;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -370,7 +370,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.easylifeproto;
+				PRODUCT_BUNDLE_IDENTIFIER = com.easylifeproto.dev;
 				PRODUCT_NAME = easylifeproto;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "easylifeproto/easylifeproto-Bridging-Header.h";
@@ -391,7 +391,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = VNM5A4UMXJ;
+				DEVELOPMENT_TEAM = VGND858YNQ;
 				INFOPLIST_FILE = easylifeproto/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
