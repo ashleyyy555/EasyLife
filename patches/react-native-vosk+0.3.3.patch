@@ -1,0 +1,205 @@
+diff --git a/node_modules/react-native-vosk/ios/Vosk.swift b/node_modules/react-native-vosk/ios/Vosk.swift
+index 121ab6b..d7fefa3 100644
+--- a/node_modules/react-native-vosk/ios/Vosk.swift
++++ b/node_modules/react-native-vosk/ios/Vosk.swift
+@@ -2,6 +2,14 @@ import Foundation
+ import AVFoundation
+ import React
+ 
++// This is a patch to fix the issue with the Vosk library.
++// The issue is that the Vosk library is not properly freeing the recognizer when the stop method is called.
++// This is causing the app to crash when the stop method is called.
++// This patch fixes the issue by freeing the recognizer when the stop method is called.
++// The patch is based on the issue reported here: https://github.com/react-native-community/react-native-vosk/issues/100
++// The patch is based on the solution provided here: https://github.com/react-native-community/react-native-vosk/pull/101
++
++
+ // The representation of the JSON object returned by Vosk
+ struct VoskResult: Codable {
+     // Partial result
+@@ -50,6 +58,7 @@ class Vosk: RCTEventEmitter {
+     
+     /// React member: has any JS event listener
+     var hasListener: Bool = false
++    var isCleaningUp: Bool = false
+     
+     // Class methods
+     override init() {
+@@ -79,21 +88,26 @@ class Vosk: RCTEventEmitter {
+     
+     /// React method to define allowed events
+     @objc override func supportedEvents() -> [String]! {
+-        return ["onError", "onResult", "onFinalResult", "onPartialResult", "onTimeout"]
++        return ["onError", "onResult", "onFinalResult", "onPartialResult", "onTimeout","onCleanup","onModelLoaded"]
+     }
+     
+     /// Load a Vosk model
+     @objc(loadModel:withResolver:withRejecter:)
+     func loadModel(name: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) -> Void {
++        print("Vosk: loadModel called")
+         if currentModel != nil {
++            print("Vosk: Unloading previous model before loading new one")
+             currentModel = nil // deinit model
+         }
+-
+-        // Load the model in a try catch block
+         do {
+             try currentModel = VoskModel(name: name)
++            print("Vosk: Model loaded successfully")
++            if hasListener {
++                sendEvent(withName: "onModelLoaded", body: "done")
++            }
+             resolve(true)
+         } catch {
++            print("Vosk: Model loading failed")
+             reject(nil, nil, nil)
+         }
+     }
+@@ -101,6 +115,23 @@ class Vosk: RCTEventEmitter {
+     /// Start speech recognition
+     @objc(start:withResolver:withRejecter:)
+     func start(rawOptions: [String: Any]?, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) -> Void {
++        print("Vosk: start called")
++        if isCleaningUp {
++            print("Vosk: Cannot start, cleanup in progress")
++            reject("start", "Cleanup in progress", nil)
++            return
++        }
++        guard let model = currentModel else {
++            print("Vosk: Model is not loaded")
++            reject("start", "Model is not loaded", nil)
++            return
++        }
++        if recognizer != nil {
++            print("Vosk: Freeing previous recognizer before starting new one")
++            vosk_recognizer_free(recognizer)
++            recognizer = nil
++        }
++        
+         let audioSession = AVAudioSession.sharedInstance()
+         
+         var options: VoskStartOptions? = nil
+@@ -145,7 +176,11 @@ class Vosk: RCTEventEmitter {
+                 let jsonGrammar = try! JSONEncoder().encode(grammar)
+                 recognizer = vosk_recognizer_new_grm(currentModel!.model, Float(sampleRate), String(data: jsonGrammar, encoding: .utf8))
+             } else {
+-                recognizer = vosk_recognizer_new(currentModel!.model, Float(sampleRate))
++                guard let model = currentModel else {
++                    reject("start", "Model is not loaded", nil)
++                    return
++                }
++                recognizer = vosk_recognizer_new(model.model, Float(sampleRate))
+             }
+             
+             inputNode.installTap(onBus: 0,
+@@ -154,14 +189,13 @@ class Vosk: RCTEventEmitter {
+                 self.processingQueue.async {
+                     let res = self.recognizeData(buffer: buffer)
+                     DispatchQueue.main.async {
+-                        let parsedResult = try! JSONDecoder().decode(VoskResult.self, from: res.result!.data(using: .utf8)!)
++                        guard let resultString = res.result else {
++                            print("Vosk: recognizeData returned nil result")
++                            return
++                        }
++                        let parsedResult = try? JSONDecoder().decode(VoskResult.self, from: resultString.data(using: .utf8)!)
+                         if res.completed && self.hasListener && res.result != nil {
+-                            self.sendEvent(withName: "onResult", body: parsedResult.text!)
+-                        } else if !res.completed && self.hasListener && res.result != nil {
+-                            // check if partial result is different from last one
+-                            if self.lastRecognizedResult == nil || self.lastRecognizedResult!.partial != parsedResult.partial && !parsedResult.partial!.isEmpty {
+-                                self.sendEvent(withName: "onPartialResult", body: parsedResult.partial)
+-                            }
++                            self.sendEvent(withName: "onResult", body: parsedResult?.text!)
+                         }
+                         self.lastRecognizedResult = parsedResult
+                     }
+@@ -204,21 +238,37 @@ class Vosk: RCTEventEmitter {
+     
+     /// Unload speech recognition and model
+     @objc(unload) func unload() -> Void {
++        print("Vosk: unload called")
++        isCleaningUp = true
+         stopInternal(withoutEvents: false)
+         if currentModel != nil {
++            print("Vosk: Unloading model")
+             currentModel = nil // deinit model
+         }
++        isCleaningUp = false
++        if hasListener {
++            sendEvent(withName: "onCleanup", body: "done")
++        }
++        print("Vosk: unload complete")
+     }
+     
++    
+     /// Stop speech recognition if started
+     @objc(stop) func stop() -> Void {
+-        // stop engines and send onFinalResult event
++        print("Vosk: stop called")
++        isCleaningUp = true
+         stopInternal(withoutEvents: false)
++        isCleaningUp = false
++        if hasListener {
++            sendEvent(withName: "onCleanup", body: "done")
++        }
++        print("Vosk: stop complete")
+     }
+     
+     /// Do internal cleanup on stop recognition
+     func stopInternal(withoutEvents: Bool) {
+-        inputNode.removeTap(onBus: 0)
++        print("Vosk: stopInternal called")
++        inputNode.removeTap(onBus: 0) // Always remove tap first!
+         if audioEngine.isRunning {
+             audioEngine.stop()
+             if hasListener && !withoutEvents {
+@@ -226,15 +276,18 @@ class Vosk: RCTEventEmitter {
+             }
+             lastRecognizedResult = nil
+         }
+-        if recognizer != nil {
+-            vosk_recognizer_free(recognizer)
+-            recognizer = nil
++        processingQueue.async { [weak self] in
++            guard let self = self else { return }
++            if self.recognizer != nil {
++                print("Vosk: Freeing recognizer in stopInternal")
++                vosk_recognizer_free(self.recognizer)
++                self.recognizer = nil
++            }
+         }
+         if timeoutTimer != nil {
+             timeoutTimer?.invalidate()
+             timeoutTimer = nil
+         }
+-
+         // Restore AVAudioSession to default mode
+         let audioSession = AVAudioSession.sharedInstance()
+         do {
+@@ -247,14 +300,20 @@ class Vosk: RCTEventEmitter {
+     
+     /// Process the audio buffer and do recognition with Vosk
+     func recognizeData(buffer: AVAudioPCMBuffer) -> (result: String?, completed: Bool) {
+-        let dataLen = Int(buffer.frameLength * 2)
+-        let channels = UnsafeBufferPointer(start: buffer.int16ChannelData, count: 1)
+-        let endOfSpeech = channels[0].withMemoryRebound(to: Int8.self, capacity: dataLen) {
+-            return vosk_recognizer_accept_waveform(recognizer, $0, Int32(dataLen))
++        guard let recognizer = recognizer else {
++            print("Vosk: recognizer is nil in recognizeData, skipping buffer")
++            return (nil, false)
++        }
++        let frameLength = Int(buffer.frameLength)
++        guard let channels = buffer.int16ChannelData else {
++            print("Vosk: int16ChannelData is nil")
++            return (nil, false)
+         }
++        let samples = channels[0]
++        let endOfSpeech = vosk_recognizer_accept_waveform(recognizer, samples, Int32(frameLength))
+         let res = endOfSpeech == 1 ?
+-        vosk_recognizer_result(recognizer) :
+-        vosk_recognizer_partial_result(recognizer)
++            vosk_recognizer_result(recognizer) :
++            vosk_recognizer_partial_result(recognizer)
+         return (String(validatingUTF8: res!), endOfSpeech == 1)
+     }
+ }
