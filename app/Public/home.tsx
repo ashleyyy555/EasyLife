@@ -168,10 +168,22 @@ export default function Home() {
         });
 
         const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
-            console.log('Vosk final result:', result);
-            setTranscription(result);
-            console.log('Transcription:', result);
-        });
+            if (isClassifying) return; // prevent concurrent calls
+            isClassifying = true;
+            try {
+                console.log('Vosk final result:', result);
+                setTranscription(result); // store transcription for UI
+                const predicted = await classify(result);
+                console.log('SVM Prediction:', predicted);
+                setPrediction(predicted);
+            } catch (err) {
+                console.error('Classification error:', err);
+                setPrediction("unknown");
+            } finally {
+                isClassifying = false;
+            }
+        }); 
+
 
         const timeoutSubscription = eventEmitter.addListener('onTimeout', () => {
             console.log('Vosk timeout');
