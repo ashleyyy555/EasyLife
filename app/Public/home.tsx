@@ -167,7 +167,7 @@ export default function Home() {
             setIsListening(false);
         });
 
-        const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
+        const finalResultSubscription = eventEmitter.addListener('onFinalResult', async (result: string) => {
             if (isClassifying) return; // prevent concurrent calls
             isClassifying = true;
             try {
