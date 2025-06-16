@@ -172,8 +172,8 @@ export default function Home() {
             isClassifying = true;
             try {
                 console.log('Vosk final result:', result);
-                setTranscription(result); // store transcription for UI
-                const predicted = await classify(result);
+                setTranscription(result);   // store transcription for UI
+                const predicted = await classify(result);   // svm inference
                 console.log('SVM Prediction:', predicted);
                 setPrediction(predicted);
             } catch (err) {
@@ -371,6 +371,18 @@ export default function Home() {
         }
         if (!user || !region) return;
 
+        // [SVM INTEGRATION GUARD] Wait until classification is complete
+        if (isClassifying) {
+            console.log("Waiting for classification to complete...");
+            await new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (!isClassifying) {
+                        clearInterval(interval);
+                        resolve(true);
+                    }
+                }, 100); // poll every 100ms
+            });
+        }
 
         try {
             const counterRef = doc(db, "counters", "reportsCounter");
