@@ -168,10 +168,22 @@ export default function Home() {
         });
 
         const finalResultSubscription = eventEmitter.addListener('onFinalResult', (result: string) => {
-            console.log('Vosk final result:', result);
-            setTranscription(result);
-            console.log('Transcription:', result);
-        });
+            if (isClassifying) return; // prevent concurrent calls
+            isClassifying = true;
+            try {
+                console.log('Vosk final result:', result);
+                setTranscription(result);   // store transcription for UI
+                const predicted = await classify(result);   // svm inference
+                console.log('SVM Prediction:', predicted);
+                setPrediction(predicted);
+            } catch (err) {
+                console.error('Classification error:', err);
+                setPrediction("unknown");
+            } finally {
+                isClassifying = false;
+            }
+        }); 
+
 
         const timeoutSubscription = eventEmitter.addListener('onTimeout', () => {
             console.log('Vosk timeout');
@@ -359,6 +371,18 @@ export default function Home() {
         }
         if (!user || !region) return;
 
+        // [SVM INTEGRATION GUARD] Wait until classification is complete
+        if (isClassifying) {
+            console.log("Waiting for classification to complete...");
+            await new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (!isClassifying) {
+                        clearInterval(interval);
+                        resolve(true);
+                    }
+                }, 100); // poll every 100ms
+            });
+        }
 
         try {
             const counterRef = doc(db, "counters", "reportsCounter");
