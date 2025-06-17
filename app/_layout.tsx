@@ -5,11 +5,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useTheme } from "@/context/ThemeContext";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth, db } from "@/FirebaseConfig";
+import { auth, db, rtdb } from "@/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { Portal, Provider } from 'react-native-paper';
 import LoadingSpinner from "@/components/LoadingSpinner"; // Make sure to create this or use your existing loading spinner component
 import { ProfileProvider } from "@/context/ProfileContext"; // Import ProfileProvider
+import { ActiveReportContextProvider } from "@/context/ActiveReportContext";
+
+
+import * as Location from 'expo-location';
+import { LOCATION_TASK_NAME } from '@/app/tasks/locationTask';
+import { getActiveReportId } from '@/app/utils/reportHelpers';
+import { ref, set } from "firebase/database";
+
+import * as TaskManager from 'expo-task-manager';
+import { getAuth } from 'firebase/auth';
 
 
 import { useNavigation } from '@react-navigation/native';
@@ -21,6 +31,8 @@ export default function Layout() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [user, setUser] = useState(null); // Add user state
     const [authLoading, setAuthLoading] = useState(true); // Add authLoading state
+
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -48,6 +60,68 @@ export default function Layout() {
 
         return () => unsubscribe();
     }, []);
+
+    const uploadLocationToDatabase = async (
+        latitude: number,
+        longitude: number,
+        reportId: string
+    ) => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const locationRef = ref(rtdb, `reports/${reportId}/locations/${user.uid}`);
+        await set(locationRef, {
+            latitude,
+            longitude,
+            timestamp: Date.now(),
+        });
+    };
+
+
+
+    useEffect(() => {
+        if (!user) return;
+
+        const startLocationUpdates = async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                console.warn('❌ Location permission denied');
+                return;
+            }
+
+            const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+            if (backgroundStatus !== 'granted') {
+                console.warn('Background location permission denied');
+                return;
+            }
+
+            const reportId = await getActiveReportId(user.uid);
+            if (!reportId) {
+                console.log('ℹ️ No active report found, skipping location updates');
+                return;
+            }
+
+            const hasStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+            if (!hasStarted) {
+                await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+                    accuracy: Location.Accuracy.High,
+                    timeInterval: 5000,
+                    distanceInterval: 0,
+                    showsBackgroundLocationIndicator: true,
+                    foregroundService: {
+                        notificationTitle: 'Sharing location',
+                        notificationBody: 'Your location is being shared for an active report.',
+                    },
+                });
+                console.log('✅ Location tracking started');
+            } else {
+                console.log('📍 Location tracking already running');
+            }
+        };
+
+        startLocationUpdates();
+    }, [user]);
+
 
     // If authentication is still loading, show a spinner
     if (authLoading) return <LoadingSpinner />;
@@ -110,20 +184,30 @@ export default function Layout() {
         }
     };
 
+    function LayoutContent() {
+
+
+        return (
+            <Stack
+                screenOptions={{
+                    headerShown: false,
+                    headerTitle: () => <View />,
+                    headerTransparent: true,
+                    headerRight: () => <HeaderRight />,
+                    headerBackTitle: "Back",
+                    headerLeft: () => <HeaderLeft />,
+                }}
+            />
+        );
+    }
+
+
     return (
         <Provider>
             <ThemeProvider>
-                <Stack
-                    screenOptions={{
-                        headerShown: false,
-                        headerTitle: () => <View />, // Removes the default title
-                        headerTransparent: true, // Makes header see-through
-                        headerRight: () => <HeaderRight />,
-                        headerBackTitle: "Back",
-                        headerLeft: () => <HeaderLeft />,
-                    }}
-                >
-                </Stack>
+                <ActiveReportContextProvider>
+                    <LayoutContent />
+                </ActiveReportContextProvider>
             </ThemeProvider>
         </Provider>
     );

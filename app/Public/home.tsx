@@ -17,6 +17,10 @@ import * as Location from "expo-location";
 import { Audio } from 'expo-av';
 import { classify } from '@/app/utils/svmClassifier';
 import { unloadModel } from '@/app/utils/svmClassifier';
+import { useActiveReportContext } from '@/context/ActiveReportContext';
+
+
+
 
 const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
 let isClassifying = false; // Prevents parallel classify() calls
@@ -27,6 +31,9 @@ let subscriptions: any[] = []; // [ADDED]
 export default function Home() {
     const { theme } = useTheme();
     const colorScheme = useColorScheme();
+    const [activeReportId, setActiveReport] = useActiveReportContext();
+
+
     const insets = useSafeAreaInsets();
 
     // Report Model Use State
@@ -419,6 +426,8 @@ export default function Home() {
 
             sendReportId(reportId);
             console.log("Report submitted with ID:", reportId);
+            setActiveReport(reportId);
+            console.log(activeReportId);
             setVoiceRecognitionModalVisible(false);
             setSubmissionFeedbackMessage("Reported Successfully");
             setSubmissionFeedbackModalVisible(true);

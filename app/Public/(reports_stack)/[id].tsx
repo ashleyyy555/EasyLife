@@ -7,12 +7,15 @@ import { auth, db, storage } from "@/FirebaseConfig"; // use your config here
 import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import LocationkIcon from "@/components/LocationIcon";
 import { Stack, router, useLocalSearchParams } from "expo-router";
+import { useActiveReportContext } from '@/context/ActiveReportContext';
+
 
 
 
 export default function DetailedReport() {
     const { theme } = useTheme();
     const { id } = useLocalSearchParams();
+    const [activeReportId, setActiveReport] = useActiveReportContext();
 
     // useStates for Fetching information
     const [status, setStatus] = useState();
@@ -102,11 +105,13 @@ export default function DetailedReport() {
 
     const cancelReport = async (id: string) => {
         setReportComplete(id);
+        setActiveReport(null);
         router.replace("/Public/(reports_stack)");
     }
 
     const completeReport = async (id: string) => {
         setReportComplete(id);
+        setActiveReport(null);
         router.replace("/Public/(reports_stack)");
     }
 

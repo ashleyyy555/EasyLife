@@ -1,19 +1,82 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, Region, Polyline } from 'react-native-maps';
+import { onSnapshot, doc, collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '@/FirebaseConfig'; // Adjust based on your Firebase setup
 import * as Location from 'expo-location';
+import {onAuthStateChanged} from "firebase/auth";
 // @ts-ignore
 import polyline from '@mapbox/polyline'
 import CarMarker from "./CarMarker";
 
 const Map = () => {
+    const [userId, setUserId] = useState();
     const [region, setRegion] = useState<Region | null>(null);
     const [carPosition, setCarPosition] = useState<{ latitude: number; longitude: number } | null>(null);
     const [path, setPath] = useState<{ latitude: number; longitude: number }[]>([]);
     const [routeCoords, setRouteCoords] = useState([]);
-
+    const [hasActiveReport, setHasActiveReport] = useState(false);
 
     const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // @ts-ignore
+                setUserId(firebaseUser.uid);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // ✅ Check Firestore for ongoing report
+    useEffect(() => {
+        if (!userId) return;
+
+        const q = query(
+            collection(db, 'reports'),
+            where('userId', '==', userId),
+            where('status', '==', 'Active')
+        );
+
+        const unsubscribe = onSnapshot(
+            q,
+            async (querySnapshot) => {
+                const hasReport = !querySnapshot.empty;
+                setHasActiveReport(hasReport);
+                console.log('Active report status changed:', hasReport);
+
+                if (hasReport) {
+                    const handleRoute = async () => {
+                        const calculatedCarLatitude = 3.1872776809095846;
+                        const calculatedCarLongitude = 101.62876346677416;
+                        const carCoords = {
+                            latitude: calculatedCarLatitude,
+                            longitude: calculatedCarLongitude,
+                        };
+
+                        const location = await Location.getCurrentPositionAsync({
+                            accuracy: Location.Accuracy.High,
+                        });
+
+                        const { latitude, longitude } = location.coords;
+
+                        setCarPosition(carCoords);
+                        await getRoute({ latitude, longitude }, carCoords);
+                    };
+
+                    handleRoute();
+                }
+            },
+            (error) => {
+                console.error('Error listening for ongoing reports:', error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [userId]);
+
 
     useEffect(() => {
         const getCurrentLocation = async () => {
@@ -28,12 +91,7 @@ const Map = () => {
             });
 
             const { latitude, longitude } = location.coords;
-            const calculatedCarLatitude = 3.1872776809095846;
-            const calculatedCarLongitude = 101.62876346677416;
-            const carCoords = {
-                latitude: calculatedCarLatitude,
-                longitude: calculatedCarLongitude,
-            };
+
 
             setRegion({
                 latitude,
@@ -42,13 +100,7 @@ const Map = () => {
                 longitudeDelta: 0.01,
             });
 
-            setCarPosition({
-                latitude: calculatedCarLatitude,
-                longitude: calculatedCarLongitude,
-            });
 
-            // 👇 Call getRoute using these coordinates
-            await getRoute({ latitude, longitude }, carCoords);
         };
 
         getCurrentLocation();
@@ -107,6 +159,7 @@ const Map = () => {
                 strokeWidth={4}
             />
         </MapView>
+
     );
 };
 

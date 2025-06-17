@@ -4,12 +4,14 @@ import { View, TouchableOpacity, Image } from "react-native";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/FirebaseConfig";
+import { auth, db, rtdb } from "@/FirebaseConfig";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import SideMenu from '@/components/SideMenu';
 import { Portal } from 'react-native-paper';
 import MedicalRecordsIcon from "@/components/MedicalRecordsIcon"
 import LocationIcon from "@/components/LocationIcon";
+import { ref, set } from "firebase/database";
+import { useActiveReportContext } from '@/context/ActiveReportContext';
 
 
 
@@ -17,6 +19,45 @@ export default function Layout() {
     const [menuVisible, setMenuVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const { theme } = useTheme();
+    const [activeReportId, setActiveReport] = useActiveReportContext();
+    const [locationData, setLocationData] = useState<any>(null);
+
+
+
+    const uploadGeolocation = (userId: string, locationData: any) => {
+        const locationRef = ref(rtdb, `reports/${activeReportId}/geolocation`);
+        return set(locationRef, locationData)
+            .then(() => {
+                console.log("📍 Location uploaded:", locationData);
+            })
+            .catch((error) => {
+                console.error("❌ Error uploading location:", error);
+            });
+    };
+
+
+// Simulate location updates
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setLocationData({
+                latitude: 3.139 + Math.random() * 0.01,
+                longitude: 101.6869 + Math.random() * 0.01,
+                timestamp: Date.now(),
+            });
+        }, 5000); // update every 5 seconds
+
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        if (!activeReportId) return;
+
+        const user = auth.currentUser;
+        if (!user || !locationData) return;
+
+        console.log("🚀 Uploading updated location:", locationData);
+        uploadGeolocation(user.uid, locationData);
+    }, [locationData, activeReportId]);
 
     useEffect(() => {
         // @ts-ignore
