@@ -106,13 +106,13 @@ export default function DetailedReport() {
     const cancelReport = async (id: string) => {
         setReportComplete(id);
         setActiveReport(null);
-        router.replace("/Public/(reports_stack)");
+        router.replace("/Operators/(reports_stack)");
     }
 
     const completeReport = async (id: string) => {
         setReportComplete(id);
         setActiveReport(null);
-        router.replace("/Public/(reports_stack)");
+        router.replace("/Operators/(reports_stack)");
     }
 
     const fetchReports = async (uid: string) => {

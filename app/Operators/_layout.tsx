@@ -1,16 +1,17 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, TouchableOpacity, Image, Text, Pressable } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/FirebaseConfig";
+import { auth, db, rtdb } from "@/FirebaseConfig";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import SideMenu from '@/components/SideMenu';
 import { Portal } from 'react-native-paper';
 import MedicalRecordsIcon from "@/components/MedicalRecordsIcon"
 import LocationIcon from "@/components/LocationIcon";
-
+import { ref, set } from "firebase/database";
+import { useActiveReportContext } from '@/context/ActiveReportContext';
 
 
 export default function Layout() {
@@ -18,6 +19,49 @@ export default function Layout() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [status, setStatus] = useState<string | null>(null);
     const { theme } = useTheme();
+    const [activeReportId, setActiveReport] = useActiveReportContext();
+    const locationData = useRef<any>(null);
+
+    const uploadGeolocation = (userId: string, locationData: any) => {
+        const locationRef = ref(rtdb, `reports/${activeReportId}/operatorGeolocation`);
+        return set(locationRef, locationData)
+            .then(() => {
+                console.log("📍 Operator location uploaded:", locationData);
+            })
+            .catch((error) => {
+                console.error("❌ Error uploading location:", error);
+            });
+    };
+
+    // Simulate location updates
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const newLocation = {
+                latitude: 3.1872776809095846 + Math.random() * 0.01,
+                longitude: 101.62876346677416 + Math.random() * 0.01,
+                timestamp: Date.now(),
+            };
+
+            locationData.current = newLocation;
+
+
+            if (auth.currentUser && activeReportId) {
+                uploadGeolocation(auth.currentUser.uid, newLocation);
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [activeReportId]);
+
+    useEffect(() => {
+        if (!activeReportId) return;
+
+        const user = auth.currentUser;
+        if (!user || !locationData) return;
+
+        console.log("🚀 Uploading updated operator location:", locationData);
+        uploadGeolocation(user.uid, locationData);
+    }, [locationData, activeReportId]);
 
     useEffect(() => {
         // @ts-ignore
@@ -169,9 +213,11 @@ export default function Layout() {
             />
 
             <Tabs.Screen
-                name="emergencyReport"
+                name="(reports_stack)"
                 options={{
-                    title: "Report",
+                    title: "Reports",
+                    headerTransparent: false,
+                    headerShown: false,
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="map-outline" size={size} color={color} />
                     ),

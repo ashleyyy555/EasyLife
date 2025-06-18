@@ -26,7 +26,7 @@ export default function Layout() {
 
 
     const uploadGeolocation = (userId: string, locationData: any) => {
-        const locationRef = ref(rtdb, `reports/${activeReportId}/geolocation`);
+        const locationRef = ref(rtdb, `reports/${activeReportId}/userGeolocation`);
         return set(locationRef, locationData)
             .then(() => {
                 console.log("📍 Location uploaded:", locationData);

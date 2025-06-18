@@ -1,6 +1,6 @@
-import { Image, Text, View, SafeAreaView, Pressable, Modal, TextInput, PermissionsAndroid, NativeModules, Platform, DeviceEventEmitter } from "react-native";
+import { Image, Text, View, SafeAreaView, Pressable, Modal, TextInput, PermissionsAndroid, NativeModules, Platform, DeviceEventEmitter, Alert, NativeEventEmitter } from "react-native";
 import { useColorScheme } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {router} from "expo-router";
 import "../global.css";
 import {useTheme} from "@/context/ThemeContext";
@@ -9,16 +9,33 @@ import MedicalRecordsIcon from "@/components/MedicalRecordsIcon";
 import LocationIcon from "@/components/LocationIcon";
 import MicIcon from "@/components/MicIcon";
 import MapModal from "@/components/MapModal"
-import { doc, setDoc, runTransaction } from "firebase/firestore";
+import { doc, setDoc, runTransaction, collection, query, where, getDocs, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import {Region} from "react-native-maps";
-import * as Location from "expo-location"; // use your config here
+import * as Location from "expo-location";
+import { Audio } from 'expo-av';
+import { classify } from '@/app/utils/svmClassifier';
+import { unloadModel } from '@/app/utils/svmClassifier';
+import { useActiveReportContext } from '@/context/ActiveReportContext';
+import { useProfilePicContext } from '@/context/ProfilePicContext';
+
+
+
+
+const eventEmitter = new NativeEventEmitter(NativeModules.Vosk);
+let isClassifying = false; // Prevents parallel classify() calls
+let finalResultSubscription: any = null; // [ADDED]
+let subscriptions: any[] = []; // [ADDED]
 
 
 export default function Home() {
     const { theme } = useTheme();
     const colorScheme = useColorScheme();
+    const [activeReportId, setActiveReport] = useActiveReportContext();
+    const [profilePicURL, setProfilePicURL] = useProfilePicContext();
+
+
     const insets = useSafeAreaInsets();
 
     // Report Model Use State
@@ -35,7 +52,15 @@ export default function Home() {
         setReportModalVisible(false);
         setVoiceRecognitionModalVisible(true);
     }
-    const closeVoiceRecognitionModal = () => setVoiceRecognitionModalVisible(false);
+    // Voice Recognition Modal Close with Cleanup
+    const closeVoiceRecognitionModal = async () => {
+        setVoiceRecognitionModalVisible(false);
+        await stopVoiceRecognition();   // Stop Vosk properly
+        await NativeModules.Vosk.unload(); // full cleanup
+        unloadModel();  // cleanup SVM ONNX session
+        await new Promise(resolve => setTimeout(resolve, 1000)); // delay
+        setIsModelLoaded(false); // ensure reload works later
+    };
 
     // Select Location Message Modal
     const [selectLocationMessageModalVisible, setSelectLocationMessageModalVisible] = useState(false);
@@ -81,47 +106,204 @@ export default function Home() {
 
     //Request mic permission for listening
     const requestMicPermission = async () => {
+        console.log('Requesting microphone permission...');
         if (Platform.OS === 'android') {
+            console.log('Android platform detected, requesting Android permissions');
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
             );
+            console.log('Android permission result:', granted);
             if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-                console.warn('Microphone permission denied');
+                throw new Error('Microphone permission denied');
+            }
+        } else if (Platform.OS === 'ios') {
+            console.log('iOS platform detected, requesting iOS permissions');
+            const { status } = await Audio.requestPermissionsAsync();
+            console.log('iOS permission status:', status);
+            if (status !== 'granted') {
+                throw new Error('Microphone permission denied');
+            }
+        }
+        console.log('Microphone permission granted');
+        return true;
+    };
+
+    const [prediction, setPrediction] = useState('');
+    const [transcription, setTranscription] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const [isModelLoaded, setIsModelLoaded] = useState(false);
+    const [isModelBusy, setIsModelBusy] = useState(false);
+    const [pendingAction, setPendingAction] = useState<"load" | "start" | null>(null);
+    const pendingActionRef = useRef<"load" | "start" | null>(null);
+
+
+    useEffect(() => {
+        pendingActionRef.current = pendingAction;
+    }, [pendingAction]);
+
+    useEffect(() => {
+        const cleanupListener = eventEmitter.addListener('onCleanup', (msg) => {
+            console.log('Native cleanup complete:', msg);
+            setIsModelBusy(false);
+            // If we were waiting to load/start, continue the chain
+            if (pendingActionRef.current === "load") {
+                NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
+                setPendingAction("start");
+            }
+        });
+        const modelLoadedListener = eventEmitter.addListener('onModelLoaded', (msg) => {
+            console.log('Native model loaded:', msg);
+            setIsModelLoaded(true);
+            if (pendingActionRef.current === "start") {
+                NativeModules.Vosk.start({ timeout: 100000000 })
+                    .then((result: any) => {
+                        console.log('Vosk start result:', result);
+                        setIsListening(true);
+                        setIsModelBusy(false);
+                    })
+                    .catch((err: any) => {
+                        console.error('Error starting recognition:', err);
+                        setIsModelBusy(false);
+                        setIsListening(false);
+                        Alert.alert('Error', 'Failed to start voice recognition: ' + (err?.message || err));
+                    });
+                setPendingAction(null);
+            }
+        });
+        const errorSubscription = eventEmitter.addListener('onError', (error: any) => {
+            console.error('Vosk error:', error);
+            setIsModelBusy(false);
+            setIsListening(false);
+        });
+
+        const finalResultSubscription = eventEmitter.addListener('onFinalResult', async (result: string) => {
+            if (isClassifying) return; // prevent concurrent calls
+            isClassifying = true;
+            try {
+                console.log('Vosk final result:', result);
+                setTranscription(result);   // store transcription for UI
+                const predicted = await classify(result);   // svm inference
+                console.log('SVM Prediction:', predicted);
+                setPrediction(predicted);
+            } catch (err) {
+                console.error('Classification error:', err);
+                setPrediction("unknown");
+            } finally {
+                isClassifying = false;
+            }
+        });
+
+
+        const timeoutSubscription = eventEmitter.addListener('onTimeout', () => {
+            console.log('Vosk timeout');
+            setIsModelBusy(false);
+            setIsListening(false);
+        });
+        // Only remove listeners on unmount, not on every pendingAction change
+        return () => {
+            errorSubscription.remove();
+            finalResultSubscription.remove();
+            timeoutSubscription.remove();
+            cleanupListener.remove();
+            modelLoadedListener.remove();
+            if (isModelLoaded) {
+                NativeModules.Vosk.unload();
+                setIsModelLoaded(false);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
+    const startVoiceRecognition = async () => {
+        if (isModelBusy) {
+            console.log('Model is busy, please wait...');
+            return;
+        }
+        setIsModelBusy(true);
+
+        try {
+            await requestMicPermission();
+            await stopVoiceRecognition(); // [ADDED] ensure previous session stopped
+            console.log('Permission check passed');
+            // Configure audio for recording BEFORE any model operations
+            try {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                    interruptionModeIOS: 1, // DoNotMix
+                    interruptionModeAndroid: 1, // DoNotMix
+                    shouldDuckAndroid: true,
+                });
+                console.log('Audio configured successfully');
+            } catch (audioError) {
+                console.error('Error configuring audio:', audioError);
+                setIsModelBusy(false);
+                throw new Error('Failed to configure audio session');
+            }
+            if (isModelLoaded) {
+                console.log('Cleaning up previous model instance...');
+                try {
+                    await NativeModules.Vosk.stop();
+
+                    await NativeModules.Vosk.unload();
+                    setIsModelLoaded(false);
+
+                    setPendingAction("load");
+
+                } catch (cleanupError) {
+                    console.error('Error during cleanup:', cleanupError);
+                    setIsModelBusy(false);
+                }
+
+            } else {
+                NativeModules.Vosk.loadModel('vosk-model-small-en-us-0.15');
+                setPendingAction("start");
+
+            }
+        } catch (error: any) {
+            console.error('Error in voice recognition:', error);
+            setIsModelBusy(false);
+            setIsListening(false);
+            Alert.alert('Error', 'Failed to start voice recognition: ' + error.message);
+            try {
+                if (isModelLoaded) {
+                    await NativeModules.Vosk.unload();
+                    setIsModelLoaded(false);
+                }
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: false,
+                    playsInSilentModeIOS: false,
+                });
+            } catch (cleanupError) {
+                console.error('Error during final cleanup:', cleanupError);
             }
         }
     };
 
-    //Call speech-to-text, (not yet) connect to button
-    const { VoskModule } = NativeModules;
-    const startVoiceRecognition = () => {
-        if (VoskModule && VoskModule.startListening) {
-            VoskModule.startListening();
-        } else {
-            console.warn('VoskModule is not available');
+
+    const stopVoiceRecognition = async () => {
+        if (isModelBusy) {
+            console.log('Model is busy, please wait...');
+            return;
+        }
+        setIsModelBusy(true);
+        try {
+            if (isListening) {
+                const result = await NativeModules.Vosk.stop();
+                console.log('result', result);
+                setIsListening(false);
+                setIsModelBusy(false);
+                console.log('Voice recognition stopped');
+            }
+        } catch (error: any) {
+            console.error('Error stopping voice recognition:', error);
+            setIsModelBusy(false);
+            setIsListening(false);
+            Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
         }
     };
 
-    // where we receives the label and transcription text from android
-    const [prediction, setPrediction] = useState('');
-    const [transcription, setTranscription] = useState('');
-    useEffect(() => {
-        const subscription = DeviceEventEmitter.addListener('onPrediction', (data: { label: string, transcription: string }) => {
-            console.log('Predicted category of the case:', data.label);
-            console.log('Transcription:', data.transcription);
-            setPrediction(data.label);
-            setTranscription(data.transcription);
-        });
-
-        return () => subscription.remove();
-    }, []);
-
-
-//  This is a Stop-listening function, (yet) connect to button
-    const stopVoiceRecognition = () => {
-      if (VoskModule?.stopListening) {
-        VoskModule.stopListening();
-      }
-    };
 
     useEffect(() => {
         fetch('https://easylife-express-production.up.railway.app/')  // Replace with your URL
@@ -152,16 +334,66 @@ export default function Home() {
     };
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
                 // @ts-ignore
                 setUser(firebaseUser);
                 setUserId(firebaseUser.uid);
+
+                const userDocRef = doc(db, "operators", firebaseUser.uid);
+                const reportsRef = collection(db, "reports");
+                const reportsQuery = query(reportsRef, where("assignedOperator", "==", firebaseUser.uid));
+
+                // Fetch profile data once
+                const fetchUserData = async () => {
+                    try {
+                        const userDoc = await getDoc(userDocRef);
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            console.log("userDoc exists");
+
+                            if (userData.profilePicUrl) {
+                                setProfilePicURL(userData.profilePicUrl);
+                                console.log("Profile Pic Assigned to Context");
+                            }
+                        }
+                    } catch (error) {
+                        console.error("❌ Error fetching user data:", error);
+                    }
+                };
+
+                fetchUserData();
+
+                // Listen to real-time updates on reports
+                const unsubscribeReports = onSnapshot(reportsQuery, (querySnapshot) => {
+                    let foundActive = false;
+
+                    querySnapshot.forEach((doc) => {
+                        const report = { id: doc.id, ...doc.data() };
+                        if (report.status === "Active" && !foundActive) {
+                            setActiveReport(report.id);
+                            foundActive = true;
+                        }
+                    });
+
+                    // If no active report found, clear the activeReport
+                    if (!foundActive) {
+                        setActiveReport(null);
+                    }
+                });
+
+                // Clean up when component unmounts or auth state changes
+                return () => {
+                    unsubscribeReports();
+                };
             }
         });
 
-        return () => unsubscribe();
+        // Cleanup auth listener on unmount
+        return () => unsubscribeAuth();
     }, []);
+
+
 
     // Code to get Geolocation
 
@@ -192,7 +424,24 @@ export default function Home() {
     }, []);
 
     const handleSubmit = async () => {
+        console.log("Submit pressed");
+        if (!region) {
+
+        }
         if (!user || !region) return;
+
+        // [SVM INTEGRATION GUARD] Wait until classification is complete
+        if (isClassifying) {
+            console.log("Waiting for classification to complete...");
+            await new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (!isClassifying) {
+                        clearInterval(interval);
+                        resolve(true);
+                    }
+                }, 100); // poll every 100ms
+            });
+        }
 
         try {
             const counterRef = doc(db, "counters", "reportsCounter");
@@ -224,11 +473,13 @@ export default function Home() {
                 reportFor: reportFor,
                 classification: [prediction || "unknown"], // autio fill in the prediction
                 transcribedText: transcription || "N/A",  // autio fill in the transcription
-                status: "Complete",
+                status: "Active",
             });
 
             sendReportId(reportId);
             console.log("Report submitted with ID:", reportId);
+            setActiveReport(reportId);
+            console.log(activeReportId);
             setVoiceRecognitionModalVisible(false);
             setSubmissionFeedbackMessage("Reported Successfully");
             setSubmissionFeedbackModalVisible(true);
@@ -260,7 +511,7 @@ export default function Home() {
             </View>
             <View className="flex-row justify-center items-center gap-x-7 mt-4">
                 <Pressable
-                    onPress={() => router.push("/Operators/ProfilePage")} // Navigate to new screen
+                    onPress={() => router.push("/Public/ProfilePage")} // Navigate to new screen
                     className="bg-medical-records justify-center items-center"
                     style={{
                         width: 160,
@@ -272,7 +523,7 @@ export default function Home() {
                 </Pressable>
 
                 <Pressable
-                    onPress={() => router.push("/Operators/MapViewer")} // Navigate to new screen
+                    onPress={() => router.push("/Public/MapViewer")} // Navigate to new screen
                     className="bg-location justify-center items-center"
                     style={{
                         width: 160,
@@ -394,7 +645,7 @@ export default function Home() {
                     >
                         <Pressable
                             onPressIn={() => {
-                                console.log("Hodling Down");
+                                console.log("Holding Down");
                                 startVoiceRecognition();
                             }}
                             onPressOut={() => {
@@ -410,7 +661,7 @@ export default function Home() {
                                 justifyContent: 'center',
                             }}
                         >
-                           <MicIcon />
+                            <MicIcon />
                         </Pressable>
 
                         <Text className="text-2xl mt-4" style={{ color: theme.opposite, fontWeight: 'bold', textAlign: 'center' }}>
@@ -420,6 +671,7 @@ export default function Home() {
                         <Text className="text-xl" style={{ color: theme.opposite, textAlign: 'center' }}>
                             Hold the icon and speak
                         </Text>
+
 
                         <Pressable
                             onPress={handleSubmit}
@@ -500,10 +752,10 @@ export default function Home() {
 
             {/*Submit Report Modal*/}
             <Modal
-            visible={locationDetailsModalVisible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setLocationDetailsModalVisible(false)}
+                visible={locationDetailsModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setLocationDetailsModalVisible(false)}
             >
                 <Pressable
                     onPress={() => setLocationDetailsModalVisible(false)}
@@ -564,9 +816,9 @@ export default function Home() {
 
             {/*Submission Feedback Modal*/}
             <Modal
-            visible={submissionFeedbackModalVisible}
-            transparent={true}
-            animationType="fade">
+                visible={submissionFeedbackModalVisible}
+                transparent={true}
+                animationType="fade">
                 <Pressable
                     onPress={() => setSubmissionFeedbackModalVisible(false)}
                     style={{
@@ -614,9 +866,14 @@ export default function Home() {
                 </Pressable>
             </Modal>
 
+            <Text className="text-white text-2xl">
+                {activeReportId}, hi {profilePicURL}
+            </Text>
+
             {selectedLocation && (
                 <Text className="text-white text-2xl">
                     {selectedLocation.latitude}, {selectedLocation.longitude}
+                    {activeReportId}
                 </Text>
             )}
         </SafeAreaView>
