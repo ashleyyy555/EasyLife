@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, TouchableOpacity, Image } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db, rtdb } from "@/FirebaseConfig";
@@ -20,7 +20,8 @@ export default function Layout() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const { theme } = useTheme();
     const [activeReportId, setActiveReport] = useActiveReportContext();
-    const [locationData, setLocationData] = useState<any>(null);
+    const locationData = useRef<any>(null);
+
 
 
 
@@ -39,15 +40,23 @@ export default function Layout() {
 // Simulate location updates
     useEffect(() => {
         const interval = setInterval(() => {
-            setLocationData({
+            const newLocation = {
                 latitude: 3.139 + Math.random() * 0.01,
                 longitude: 101.6869 + Math.random() * 0.01,
                 timestamp: Date.now(),
-            });
-        }, 5000); // update every 5 seconds
+            };
+
+            locationData.current = newLocation;
+
+
+            if (auth.currentUser && activeReportId) {
+                uploadGeolocation(auth.currentUser.uid, newLocation);
+            }
+        }, 5000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [activeReportId]);
+
 
     useEffect(() => {
         if (!activeReportId) return;

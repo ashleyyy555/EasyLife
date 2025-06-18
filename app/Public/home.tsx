@@ -9,7 +9,7 @@ import MedicalRecordsIcon from "@/components/MedicalRecordsIcon";
 import LocationIcon from "@/components/LocationIcon";
 import MicIcon from "@/components/MicIcon";
 import MapModal from "@/components/MapModal"
-import { doc, setDoc, runTransaction } from "firebase/firestore";
+import { doc, setDoc, runTransaction, collection, query, where, getDocs, getDoc } from "firebase/firestore";
 import { auth, db } from "../../FirebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import {Region} from "react-native-maps";
@@ -18,6 +18,7 @@ import { Audio } from 'expo-av';
 import { classify } from '@/app/utils/svmClassifier';
 import { unloadModel } from '@/app/utils/svmClassifier';
 import { useActiveReportContext } from '@/context/ActiveReportContext';
+import { useProfilePicContext } from '@/context/ProfilePicContext';
 
 
 
@@ -32,6 +33,7 @@ export default function Home() {
     const { theme } = useTheme();
     const colorScheme = useColorScheme();
     const [activeReportId, setActiveReport] = useActiveReportContext();
+    const [profilePicURL, setProfilePicURL] = useProfilePicContext();
 
 
     const insets = useSafeAreaInsets();
@@ -332,16 +334,49 @@ export default function Home() {
     };
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
                 // @ts-ignore
                 setUser(firebaseUser);
                 setUserId(firebaseUser.uid);
+
+                const fetchData = async () => {
+                    try {
+                        const userDocRef = doc(db, "users", firebaseUser.uid);
+                        const userDoc = await getDoc(userDocRef);
+
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            console.log("userDoc exists");
+
+                            if (userData.profilePicUrl) {
+                                setProfilePicURL(userData.profilePicUrl);
+                                console.log("Profile Pic Assigned to Context");
+                            }
+                        }
+
+                        const reportsRef = collection(db, "reports");
+                        const q = query(reportsRef, where("userId", "==", firebaseUser.uid));
+                        const querySnapshot = await getDocs(q);
+
+                        querySnapshot.forEach((doc) => {
+                            const report = { id: doc.id, ...doc.data() };
+                            if (report.status === "Active") {
+                                setActiveReport(report.id);
+                            }
+                        });
+                    } catch (error) {
+                        console.error("❌ Error fetching data:", error);
+                    }
+                };
+
+                fetchData(); // ✅ call the async function
             }
         });
 
         return () => unsubscribe();
     }, []);
+
 
     // Code to get Geolocation
 
@@ -814,9 +849,14 @@ export default function Home() {
                 </Pressable>
             </Modal>
 
+            <Text className="text-white text-2xl">
+                {activeReportId}, hi {profilePicURL}
+            </Text>
+
             {selectedLocation && (
                 <Text className="text-white text-2xl">
                     {selectedLocation.latitude}, {selectedLocation.longitude}
+                    {activeReportId}
                 </Text>
             )}
         </SafeAreaView>

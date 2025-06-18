@@ -11,6 +11,7 @@ import { Portal, Provider } from 'react-native-paper';
 import LoadingSpinner from "@/components/LoadingSpinner"; // Make sure to create this or use your existing loading spinner component
 import { ProfileProvider } from "@/context/ProfileContext"; // Import ProfileProvider
 import { ActiveReportContextProvider } from "@/context/ActiveReportContext";
+import { ProfilePicContextProvider, useProfilePicContext } from "@/context/ProfilePicContext";
 
 
 import * as Location from 'expo-location';
@@ -31,6 +32,7 @@ export default function Layout() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [user, setUser] = useState(null); // Add user state
     const [authLoading, setAuthLoading] = useState(true); // Add authLoading state
+    const [profilePicURL, setProfilePicURL] = useProfilePicContext();
 
 
 
@@ -42,17 +44,9 @@ export default function Layout() {
                 setUser(firebaseUser);
                 console.log("✅ firebaseUser exists", firebaseUser);
 
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    console.log("userDoc exists")
-                    if (userData.profilePicUrl) {
-                        // If profilePicUrl exists, set the selectedImage state
-                        setSelectedImage(userData.profilePicUrl);
-                        console.log("Image Fetched");
-                    }
+                if (profilePicURL) {
+                    setSelectedImage(profilePicURL);
+                    console.log("Profile Picture Set on NavBar");
                 }
             }
             setAuthLoading(false); // Set authLoading to false after user state is fetched
@@ -172,41 +166,23 @@ export default function Layout() {
         );
     };
 
-    const handleSignOut = async () => {
-        try {
-            await signOut(auth);
-            console.log("Signed out successfully!");
-            setMenuVisible(false);
-            router.replace("/");
-            // Navigate the user to login screen if needed
-        } catch (error) {
-            console.error("Sign out error", error);
-        }
-    };
-
-    function LayoutContent() {
-
-
-        return (
-            <Stack
-                screenOptions={{
-                    headerShown: false,
-                    headerTitle: () => <View />,
-                    headerTransparent: true,
-                    headerRight: () => <HeaderRight />,
-                    headerBackTitle: "Back",
-                    headerLeft: () => <HeaderLeft />,
-                }}
-            />
-        );
-    }
-
 
     return (
         <Provider>
             <ThemeProvider>
                 <ActiveReportContextProvider>
-                    <LayoutContent />
+                    <ProfilePicContextProvider>
+                        <Stack
+                            screenOptions={{
+                                headerShown: false,
+                                headerTitle: () => <View />,
+                                headerTransparent: true,
+                                headerRight: () => <HeaderRight />,
+                                headerBackTitle: "Back",
+                                headerLeft: () => <HeaderLeft />,
+                            }}
+                        />
+                    </ProfilePicContextProvider>
                 </ActiveReportContextProvider>
             </ThemeProvider>
         </Provider>
