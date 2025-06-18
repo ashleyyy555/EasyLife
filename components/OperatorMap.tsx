@@ -23,6 +23,7 @@ const Map = () => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
                 setUserId(firebaseUser.uid);
+                console.log(userId);
             }
         });
 
@@ -58,9 +59,10 @@ const Map = () => {
     useEffect(() => {
         if (!userId) return;
 
+
         const q = query(
             collection(db, 'reports'),
-            where('userId', '==', userId),
+            where('assignedOperator', '==', userId),
             where('status', '==', 'Active')
         );
 
@@ -74,7 +76,7 @@ const Map = () => {
                 setReportId(id);
 
                 // Listen for operator location from Realtime DB
-                const operatorRef = ref(rtdb, `reports/${id}/operatorGeolocation`);
+                const operatorRef = ref(rtdb, `reports/${id}/userGeolocation`);
                 onValue(operatorRef, async (snapshot) => {
                     const data = snapshot.val();
                     console.log(data);
@@ -83,6 +85,7 @@ const Map = () => {
                             latitude: data.latitude,
                             longitude: data.longitude,
                         };
+                        console.log("operator cords" + operatorCoords.latitude);
 
                         const location = await Location.getCurrentPositionAsync({
                             accuracy: Location.Accuracy.High,

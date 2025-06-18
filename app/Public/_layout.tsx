@@ -12,7 +12,7 @@ import MedicalRecordsIcon from "@/components/MedicalRecordsIcon"
 import LocationIcon from "@/components/LocationIcon";
 import { ref, set } from "firebase/database";
 import { useActiveReportContext } from '@/context/ActiveReportContext';
-
+import * as Location from 'expo-location'; // ⬅️ add this import
 
 
 export default function Layout() {
@@ -21,8 +21,6 @@ export default function Layout() {
     const { theme } = useTheme();
     const [activeReportId, setActiveReport] = useActiveReportContext();
     const locationData = useRef<any>(null);
-
-
 
 
     const uploadGeolocation = (userId: string, locationData: any) => {
@@ -39,22 +37,57 @@ export default function Layout() {
 
 // Simulate location updates
     useEffect(() => {
-        const interval = setInterval(() => {
+        let locationInterval: any;
+
+        const startRealLocationTracking = async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                console.warn('❌ Location permission not granted');
+                return;
+            }
+
+            // Immediately get current location
+            const location = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = location.coords;
+
             const newLocation = {
-                latitude: 3.139 + Math.random() * 0.01,
-                longitude: 101.6869 + Math.random() * 0.01,
+                latitude,
+                longitude,
                 timestamp: Date.now(),
             };
 
             locationData.current = newLocation;
 
-
             if (auth.currentUser && activeReportId) {
                 uploadGeolocation(auth.currentUser.uid, newLocation);
             }
-        }, 5000);
 
-        return () => clearInterval(interval);
+            // Set up interval to get location every 5 seconds
+            locationInterval = setInterval(async () => {
+                const location = await Location.getCurrentPositionAsync({});
+                const { latitude, longitude } = location.coords;
+
+                const updatedLocation = {
+                    latitude,
+                    longitude,
+                    timestamp: Date.now(),
+                };
+
+                locationData.current = updatedLocation;
+
+                if (auth.currentUser && activeReportId) {
+                    uploadGeolocation(auth.currentUser.uid, updatedLocation);
+                }
+            }, 5000);
+        };
+
+        startRealLocationTracking();
+
+        return () => {
+            if (locationInterval) {
+                clearInterval(locationInterval);
+            }
+        };
     }, [activeReportId]);
 
 
