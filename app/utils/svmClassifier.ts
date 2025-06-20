@@ -15,9 +15,9 @@ export async function loadModel() {
   }
   console.log("Preparing to load ONNX model from assets...");
 
-  const modelAsset = Asset.fromModule(require('@/app/assets/ml/svm_model_1.0.onnx'));
+  const modelAsset = Asset.fromModule(require('@/app/assets/ml/svm_model_multilabel.onnx'));
   await modelAsset.downloadAsync();
-  const modelPath = `${FileSystem.cacheDirectory}svm_model_1.0.onnx`;
+  const modelPath = `${FileSystem.cacheDirectory}svm_model_multilabel.onnx`;
   await FileSystem.copyAsync({ from: modelAsset.localUri!, to: modelPath });
 
   console.log("Model copied to cache path:", modelPath);
@@ -36,7 +36,7 @@ export function unloadModel() {
 }
 
 
-//let vocabIndexMap: { [token: string]: number } | null = null;
+
 
 // -- Converts input text into a TF-IDF vector --
 function transform(text: string): number[] {
@@ -94,9 +94,12 @@ export async function classify(text: string): Promise<string> {
 
     console.log("Model inference complete, raw output:", outputTensor); 
 
-    const predictedIndex = outputTensor[0];
-    console.log("Predicted index:", predictedIndex);
-    const predictionLabel = labelMap[predictedIndex] || "unknown";
+    const predictedLabels: string[] = [];
+    outputTensor.forEach((value: number, index: number) => {
+      if (value === 1) {
+        predictedLabels.push(labelMap[index] || `unknown_${index}`);
+      }
+    });
   
     console.log("Final predicted label:", predictionLabel);
     return predictionLabel;
