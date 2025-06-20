@@ -74,7 +74,7 @@ function transform(text: string): number[] {
 }
 
 // -- Main classification function --
-export async function classify(text: string): Promise<string> {
+export async function classify(text: string): Promise<string[]> {
   try {
     if (!text || text.trim() === '') return ["unknown"];
 
