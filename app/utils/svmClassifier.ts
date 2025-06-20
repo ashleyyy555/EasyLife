@@ -76,7 +76,7 @@ function transform(text: string): number[] {
 // -- Main classification function --
 export async function classify(text: string): Promise<string> {
   try {
-    if (!text || text.trim() === '') return "unknown";
+    if (!text || text.trim() === '') return ["unknown"];
 
     console.log("Classify called with input:", text);
     
@@ -107,7 +107,7 @@ export async function classify(text: string): Promise<string> {
     
   } catch (error) {
     console.error("SVM classification failed:", error);
-    return "unknown";
+    return ["unknown"];
   }
 }
 
