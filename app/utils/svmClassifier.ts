@@ -90,19 +90,20 @@ export async function classify(text: string): Promise<string> {
     const results = await session.run({ input: tensor });
 
     const outputName = session.outputNames[0];
-    const outputTensor = results[outputName].data;
-
+    const outputTensor = results[outputName].data as number[];
     console.log("Model inference complete, raw output:", outputTensor); 
 
     const predictedLabels: string[] = [];
     outputTensor.forEach((value: number, index: number) => {
       if (value === 1) {
-        predictedLabels.push(labelMap[index] || `unknown_${index}`);
+        const rawLabel = labelMap[index] || `unknown_${index}`;
+        const cleaned = rawLabel.replace(/[\[\]'"\s]/g, '');
+        predictedLabels.push(cleaned);
       }
     });
   
-    console.log("Final predicted label:", predictionLabel);
-    return predictionLabel;
+    console.log("Final predicted label:", predictedLabel);
+    return predictedLabels.length > 0 ? predictedLabels : ["unknown"];
     
   } catch (error) {
     console.error("SVM classification failed:", error);
