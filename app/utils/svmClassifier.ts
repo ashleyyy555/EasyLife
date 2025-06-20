@@ -1,6 +1,6 @@
 import * as ort from 'onnxruntime-react-native';
-import tfidfConfig from '@/app/assets/ml/tfidf_config.json';
-import labelMap from '@/app/assets/ml/label_classes.json';
+import tfidfConfig from '@/app/assets/ml/tfidf_config_multilabel.json';
+import labelMap from '@/app/assets/ml/label_classes_multilabel.json';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
