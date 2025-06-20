@@ -293,14 +293,14 @@ export default function Home() {
                 const result = await NativeModules.Vosk.stop();
                 console.log('result', result);
                 setIsListening(false);
-                setIsModelBusy(false);
                 console.log('Voice recognition stopped');
             }
         } catch (error: any) {
             console.error('Error stopping voice recognition:', error);
-            setIsModelBusy(false);
             setIsListening(false);
             Alert.alert('Error', 'Failed to stop voice recognition: ' + error.message);
+        } finally {
+            setIsModelBusy(false);
         }
     };
 
